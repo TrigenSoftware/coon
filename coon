@@ -1,0 +1,64 @@
+#!/usr/bin/env node
+
+// coon [add [site name] [ssh host] [ssh user] [ssh password] [ssh port] [path in repo] [path on server]]
+// coon [bind <site name> [to <branch>]]  
+
+"use strict";
+
+var sys      = require("util"), 
+    fs       = require("fs"),
+    path     = require("path");
+
+var readline = require('readline')
+    .createInterface({
+        input: process.stdin,
+        output: process.stdout
+    }), 
+    args = process.argv.splice(2);
+
+var addWizard = [
+    ["Site (config) name: ", false],
+    ["SSH host: ", false],
+    ["SSH user: ", false],
+    ["SSH password: ", false],
+    ["SSH port (22 by default): ", 22],
+    ["Dir in repo (. by default): ", "."],
+    ["Path on server (. by default): ", "."]
+];
+
+function startAddWizard(i){
+    function addWizardQuest(){
+        readline.question(addWizard[i][0], function(answer) {
+            console.log(i);
+            if(!addWizard[i][1] && !answer) addWizardQuest(i);
+            else if(addWizard[i][1] && !answer) answer = addWizard[i][1];
+            siteData[i] = answer;
+            
+            if(i == 6) saveSiteData(siteData);
+            else addWizardQuest(i++);
+        });
+    }
+
+    addWizardQuest();
+}
+
+function saveSiteData(data){
+    console.log(data);
+    readline.close();
+    process.exit();
+}
+
+if(args[0] == "add"){
+    var siteData = [];
+
+    (args = args.splice(0)).forEach(function(arg, i){
+        if(i > 6){
+            console.log("Too many arguments.");
+            process.exit();
+        }
+        siteData.push(arg);
+    });
+
+    if(siteData.length < 7)
+        startAddWizard(siteData.length);
+}
