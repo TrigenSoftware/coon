@@ -14,7 +14,7 @@ var readline = require('readline')
         input: process.stdin,
         output: process.stdout
     }), 
-    args = process.argv.splice(2);
+    args = process.argv;
 
 var addWizard = [
     ["Site (config) name: ", false],
@@ -29,7 +29,6 @@ var addWizard = [
 function startAddWizard(i){
     function addWizardQuest(){
         readline.question(addWizard[i][0], function(answer) {
-            console.log(i);
             if(!addWizard[i][1] && !answer) addWizardQuest(i);
             else if(addWizard[i][1] && !answer) answer = addWizard[i][1];
             siteData[i] = answer;
@@ -48,17 +47,25 @@ function saveSiteData(data){
     process.exit();
 }
 
+if(!fs.existsSync(process.cwd() + "/.git")){
+    console.log("You not in git repo.");
+    process.exit();
+}
+
+args.splice(0, 2);
+
 if(args[0] == "add"){
     var siteData = [];
-
-    (args = args.splice(0)).forEach(function(arg, i){
+    
+    args.splice(0, 1);
+    args.forEach(function(arg, i){
         if(i > 6){
             console.log("Too many arguments.");
             process.exit();
         }
         siteData.push(arg);
     });
-
+    
     if(siteData.length < 7)
         startAddWizard(siteData.length);
 }
