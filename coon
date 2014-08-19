@@ -30,10 +30,9 @@ var keys = {
     SSH_PKP: 3,
     SSH_PORT: 4,
     TIMEOUT: 5,
-    DEPLOY: 6,
-    BRANCH: 7,
-    REPO_DIR: 8,
-    SERVER_PATH: 9
+    BRANCH: 6,
+    REPO_DIR: 7,
+    SERVER_PATH: 8
 };
 
 var addWizard = [
@@ -43,7 +42,6 @@ var addWizard = [
     ["Path to SSH private key: ", false],
     ["SSH port (22 by default): ", 22],
     ["Deploy timout (10 sec by default): ", 10],
-    ["Additional deploy command (empty by default): ", ""],
     ["Branch to observe (master by default): ", "master"],
     ["Dir in repo (. by default): ", "."],
     ["Path on server (. by default): ", "."]
@@ -56,7 +54,6 @@ var editWizard = [
     ["Path to SSH private key (%def): ", false],
     ["SSH port (%def): ", 22],
     ["Deploy timout (%def sec): ", 10],
-    ["Additional deploy command (%def): ", ""],
     ["Branch to observe (%def): ", "master"],
     ["Dir in repo (%def): ", "."],
     ["Path on server (%def): ", "."]
@@ -409,11 +406,6 @@ if (args[0] == "deploy" || args[0] == "delay-deploy") {
         if (err) {
             console.log("❗️  " + "Something goes wrong.".red);
             process.exit();
-        }
-
-        if(conf[keys.DEPLOY].trim().length > 0){
-            console.log("=> " + conf[keys.DEPLOY].trim().cyan);
-            sh.exec(conf[keys.DEPLOY].trim());
         }
 
         var cmds = [
