@@ -20,28 +20,40 @@ var readline = require('readline')
     args = process.argv;
 
 // some data
+var keys = {
+    NAME: 0,
+    SSH_HOST: 1,
+    SSH_USER: 2,
+    SSH_PKP: 3,
+    SSH_PORT: 4,
+    DEPLOY: 5,
+    BRANCH: 6,
+    REPO_DIR: 7,
+    SERVER_PATH: 8 
+};
+
 var addWizard = [
     ["Config name: ", false],
     ["SSH host: ", false],
     ["SSH user: ", false],
-    ["SSH password: ", false],
+    ["Path to SSH private key: ", false],
     ["SSH port (22 by default): ", 22],
     ["Deploy command (empty by default): ", ""],
     ["Branch to observe (master by default): ", "master"],
     ["Dir in repo (. by default): ", "."],
-    ["Dir on server (. by default): ", "."]
+    ["Path on server (. by default): ", "."]
 ];
 
 var editWizard = [
     ["Config name (%def): ", false],
     ["SSH host (%def): ", false],
     ["SSH user (%def): ", false],
-    ["SSH password (%def): ", false],
+    ["Path to SSH private key (%def): ", false],
     ["SSH port (%def): ", 22],
     ["Deploy command (%def): ", ""],
     ["Branch to observe (%def): ", "master"],
     ["Dir in repo (%def): ", "."],
-    ["Dir on server (%def): ", "."]
+    ["Path on server (%def): ", "."]
 ];
 
 // configs
@@ -83,6 +95,21 @@ function configs_List() {
     if (list.length == 0) console.log("Empty.".green);
     else console.log(list.replace(/, $/, "") + ".");
 
+    process.exit();
+}
+
+function configs_Show(name) {
+    if (!configsData[name]) {
+        console.log("❗️  " + "Config with name `".red + name + "` doesn't exist.".red);
+        process.exit();
+    }
+
+    var conf = configsData[name], out = "";
+    editWizard.forEach(function(wiz, i){
+        out += wiz[0].replace(" (%def)", "").green + conf[i] + "\n";
+    });
+
+    console.log(out);
     process.exit();
 }
 
@@ -188,6 +215,49 @@ if (args[0] == "list") {
     configs_List();
 }
 
+if (args[0] == "show") {
+    if (!args[1]) {
+        console.log("❗️  " + "You should write config name.".red);
+        process.exit();
+    }
+
+    configs_Show(args[1]);
+}
+
 if (args[0] == "bind") {
-    
+    if (!args[1]) {
+        console.log("❗️  " + "You should write config name.".red);
+        process.exit();
+    }
+
+    var conf = configsData[args[1]].slice();
+
+    if (args[2]) {
+        if (!args[3]) {
+            console.log("❗️  " + "You should write branch name.".red);
+            process.exit();
+        }
+
+        conf.branch = args[3];
+    }
+
+    var conn = new ssh();
+    conn.on('ready', function() {
+        conn.exec('mkdir ' + conf[keys.SERVER_PATH] + '/.coon-tmp', function(err, stream) {
+            if (err) throw err;
+            stream.on('close', function() {
+                process.exit();
+                conn.end();
+            }).on('data', function(data) {
+                
+            }).stderr.on('data', function(data) {
+                console.log('STDERR: ' + data);
+            });
+        });
+    }).connect({
+        host: conf[keys.SSH_HOST],
+        port: conf[keys.SSH_PORT],
+        username: conf[keys.SSH_USER],
+        privateKey: require('fs').readFileSync(conf[keys.SSH_PKP].replace("~", process.env.HOME + "/"), "utf8")
+    });
 }
