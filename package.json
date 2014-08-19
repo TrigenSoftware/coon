@@ -3,20 +3,33 @@
     "description": "Utility for deploying site from git.",
     "homepage": "https://github.com/TrigenSoftware/coon",
     "version": "0.0.1",
-    "engines": { "node" : ">=0.4.0" },
-    "maintainers": [{
-        "name": "Dan Onoshko (dangreen)",
-        "email": "danpn0404@gmail.com",
-        "web": "http://trigen.pro/"
-    }],
+    "engines": {
+        "node": ">=0.4.0"
+    },
+    "maintainers": [
+        "Dan Onoshko <danpn0404@gmail.com> (dangreen)"
+    ],
     "repository": {
         "type": "git",
         "url": "https://github.com/TrigenSoftware/coon.git"
     },
     "dependencies": {
-        "optimist"   : "~0.3.5"
+        "colors": "~0.6.2"
     },
     "bin": {
-        "coon" : "coon"
-    }
+        "coon": "coon"
+    },
+    "bugs": {
+        "url": "https://github.com/TrigenSoftware/coon/issues"
+    },
+    "keywords": [
+        "git",
+        "deploy",
+        "ssh",
+        "server",
+        "coon",
+        "web"
+    ],
+    "author": "Dan Onoshko (dangreen)",
+    "license": "GNU GPL v2"
 }

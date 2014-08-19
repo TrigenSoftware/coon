@@ -5,35 +5,98 @@
 
 "use strict";
 
-var sys      = require("util"), 
-    fs       = require("fs"),
-    path     = require("path");
+// require
+var sys = require("util"),
+    fs = require("fs"),
+    path = require("path"),
+    ssh = require("ssh2"),
+    cs = require("colors");
 
 var readline = require('readline')
     .createInterface({
         input: process.stdin,
         output: process.stdout
-    }), 
+    }),
     args = process.argv;
 
+// some data
 var addWizard = [
-    ["Site (config) name: ", false],
+    ["Config name: ", false],
     ["SSH host: ", false],
     ["SSH user: ", false],
     ["SSH password: ", false],
     ["SSH port (22 by default): ", 22],
+    ["Deploy command (empty by default): ", ""],
+    ["Branch to observe (master by default): ", "master"],
     ["Dir in repo (. by default): ", "."],
-    ["Path on server (. by default): ", "."]
+    ["Dir on server (. by default): ", "."]
 ];
 
-function startAddWizard(i){
-    function addWizardQuest(){
+var editWizard = [
+    ["Config name (%def): ", false],
+    ["SSH host (%def): ", false],
+    ["SSH user (%def): ", false],
+    ["SSH password (%def): ", false],
+    ["SSH port (%def): ", 22],
+    ["Deploy command (%def): ", ""],
+    ["Branch to observe (%def): ", "master"],
+    ["Dir in repo (%def): ", "."],
+    ["Dir on server (%def): ", "."]
+];
+
+// configs
+var configsData = fs.existsSync(process.cwd() + "/.git/coon.json") ? JSON.parse(fs.readFileSync(process.cwd() + "/.git/coon.json", "utf8")) : {};
+
+function configs_Save() {
+    fs.writeFileSync(process.cwd() + "/.git/coon.json", JSON.stringify(configsData), "utf8");
+}
+
+function configs_AddConfig(data, oldname) {
+    if (oldname) delete configsData[oldname];
+    configsData[data[0]] = data;
+
+    console.log("\n🍻  " + "Config `".green + data[0] + (oldname ? "` updated." : "` added.").green);
+
+    configs_Save();
+    readline.close();
+    process.exit();
+}
+
+function configs_Remove(name) {
+    if (!configsData[name]) {
+        console.log("❗️  " + "Config with name `".red + name + "` doesn't exist.".red);
+        process.exit();
+    }
+
+    delete configsData[name];
+    console.log("🍻  " + "Config `".green + name + "` removed.".green);
+
+    configs_Save();
+    readline.close();
+    process.exit();
+}
+
+function configs_List() {
+    var list = "";
+    for (var name in configsData) list += name.green + ", ";
+
+    if (list.length == 0) console.log("Empty.".green);
+    else console.log(list.replace(/, $/, "") + ".");
+
+    process.exit();
+}
+
+// helpers
+function startAddWizard(i) {
+    function addWizardQuest() {
         readline.question(addWizard[i][0], function(answer) {
-            if(!addWizard[i][1] && !answer) addWizardQuest(i);
-            else if(addWizard[i][1] && !answer) answer = addWizard[i][1];
+            if (addWizard[i][1] === false && !answer) {
+                addWizardQuest(i);
+                return;
+            } else if (addWizard[i][1] && !answer) answer = addWizard[i][1];
             siteData[i] = answer;
-            
-            if(i == 6) saveSiteData(siteData);
+
+            if (i == addWizard.length - 1) configs_AddConfig(siteData);
             else addWizardQuest(i++);
         });
     }
@@ -41,31 +104,90 @@ function startAddWizard(i){
     addWizardQuest();
 }
 
-function saveSiteData(data){
-    console.log(data);
-    readline.close();
-    process.exit();
+function startEditWizard(configname) {
+    if (!configsData[configname]) {
+        console.log("❗️  " + "Config with name `".red + configname + "` doesn't exist.".red);
+        process.exit();
+    }
+
+    var siteData = configsData[configname],
+        i = 0,
+        name = siteData[0];
+
+    function editWizardQuest() {
+        readline.question(editWizard[i][0].replace("%def", siteData[i]), function(answer) {
+            if (answer) siteData[i] = answer;
+
+            if (i == editWizard.length - 1) configs_AddConfig(siteData, name);
+            else editWizardQuest(i++);
+        });
+    }
+
+    editWizardQuest();
 }
 
-if(!fs.existsSync(process.cwd() + "/.git")){
-    console.log("You not in git repo.");
+// go
+
+if (!fs.existsSync(process.cwd() + "/.git")) {
+    console.log("❗️  " + "You not in git repo.".red);
     process.exit();
 }
 
 args.splice(0, 2);
 
-if(args[0] == "add"){
+if (args[0] == "add") {
     var siteData = [];
-    
+
     args.splice(0, 1);
-    args.forEach(function(arg, i){
-        if(i > 6){
-            console.log("Too many arguments.");
+    args.forEach(function(arg, i) {
+        if (i >= addWizard.length) {
+            console.log("❗️  " + "Too many arguments.".red);
             process.exit();
         }
         siteData.push(arg);
     });
-    
-    if(siteData.length < 7)
+
+    if (siteData.length < addWizard.length)
         startAddWizard(siteData.length);
+}
+
+if (args[0] == "edit") {
+    if (!args[1]) {
+        console.log("❗️  " + "You should write config name.".red);
+        process.exit();
+    }
+
+    if (args.length > 2) {
+        console.log("❗️  " + "Too many arguments.".red);
+        process.exit();
+    }
+
+    startEditWizard(args[1]);
+}
+
+if (args[0] == "remove") {
+    if (!args[1]) {
+        console.log("❗️  " + "You should write config name.".red);
+        process.exit();
+    }
+
+    if (args.length > 2) {
+        console.log("❗️  " + "Too many arguments.".red);
+        process.exit();
+    }
+
+    configs_Remove(args[1]);
+}
+
+if (args[0] == "list") {
+    if (args.length > 1) {
+        console.log("❗️  " + "Too many arguments.".red);
+        process.exit();
+    }
+
+    configs_List();
+}
+
+if (args[0] == "bind") {
+    
 }
