@@ -10,7 +10,9 @@ var sys = require("util"),
     fs = require("fs"),
     path = require("path"),
     ssh = require("ssh2"),
-    cs = require("colors");
+    git = require("git-info"),
+    cs = require("colors"),
+    sh = require("shelljs");
 
 var readline = require('readline')
     .createInterface({
@@ -26,10 +28,11 @@ var keys = {
     SSH_USER: 2,
     SSH_PKP: 3,
     SSH_PORT: 4,
-    DEPLOY: 5,
-    BRANCH: 6,
-    REPO_DIR: 7,
-    SERVER_PATH: 8
+    TIMEOUT: 5,
+    DEPLOY: 6,
+    BRANCH: 7,
+    REPO_DIR: 8,
+    SERVER_PATH: 9
 };
 
 var addWizard = [
@@ -38,7 +41,8 @@ var addWizard = [
     ["SSH user: ", false],
     ["Path to SSH private key: ", false],
     ["SSH port (22 by default): ", 22],
-    ["Deploy command (empty by default): ", ""],
+    ["Deploy timout (10 by default): ", 10],
+    ["Additional deploy command (empty by default): ", ""],
     ["Branch to observe (master by default): ", "master"],
     ["Dir in repo (. by default): ", "."],
     ["Path on server (. by default): ", "."]
@@ -50,17 +54,42 @@ var editWizard = [
     ["SSH user (%def): ", false],
     ["Path to SSH private key (%def): ", false],
     ["SSH port (%def): ", 22],
-    ["Deploy command (%def): ", ""],
+    ["Deploy timout (%def): ", 10],
+    ["Additional deploy command (%def): ", ""],
     ["Branch to observe (%def): ", "master"],
     ["Dir in repo (%def): ", "."],
     ["Path on server (%def): ", "."]
 ];
 
+// hook
+if(!sh.test('-e', process.cwd() + "/.git/hooks")) sh.mkdir(process.cwd() + "/.git/hooks");
+var hookScript = sh.test('-e', process.cwd() + "/.git/hooks/pre-push") ? sh.cat(process.cwd() + "/.git/hooks/pre-push") : "#!/bin/sh\n\n";
+
+function hooks_Save() {
+    hookScript.to(process.cwd() + "/.git/hooks/pre-push");
+    sh.exec("chmod +x " + process.cwd() + "/.git/hooks/pre-push");
+}
+
+function hooks_Add(conf){
+    hooks_Remove(conf, true);
+    hookScript += "# deploy " + conf[keys.NAME] + " with " + conf[keys.BRANCH] + "\nnohup ~/github/coon/coon delay-deploy \"" + conf[keys.NAME] + "\" with \"" + conf[keys.BRANCH] + "\"\n";
+    hooks_Save();
+}
+
+function hooks_Remove(conf, withBranch){
+    if(!withBranch){
+        hookScript = hookScript.replace(new RegExp("# deploy " + conf[keys.NAME] + " with [^\\n]+\n[^\\n]+\n", "g"), "");
+    } else {
+        hookScript = hookScript.replace(new RegExp("# deploy " + conf[keys.NAME] + " with " + conf[keys.BRANCH] + "\n[^\\n]+\n", "g"), "");
+    }
+    hooks_Save();
+}
+
 // configs
-var configsData = fs.existsSync(process.cwd() + "/.git/coon.json") ? JSON.parse(fs.readFileSync(process.cwd() + "/.git/coon.json", "utf8")) : {};
+var configsData = sh.test('-e', process.cwd() + "/.git/coon.json") ? JSON.parse(sh.cat(process.cwd() + "/.git/coon.json")) : {};
 
 function configs_Save() {
-    fs.writeFileSync(process.cwd() + "/.git/coon.json", JSON.stringify(configsData), "utf8");
+    JSON.stringify(configsData).to(process.cwd() + "/.git/coon.json");
 }
 
 function configs_AddConfig(data, oldname) {
@@ -122,7 +151,7 @@ function startAddWizard(i) {
                 addWizardQuest(i);
                 return;
             } else if (addWizard[i][1] && !answer) answer = addWizard[i][1];
-            siteData[i] = answer;
+            siteData[i] = answer.replace("\"", "\\\"");
 
             if (i == addWizard.length - 1) configs_AddConfig(siteData);
             else addWizardQuest(i++);
@@ -144,7 +173,7 @@ function startEditWizard(configname) {
 
     function editWizardQuest() {
         readline.question(editWizard[i][0].replace("%def", siteData[i]), function(answer) {
-            if (answer) siteData[i] = answer;
+            if (answer) siteData[i] = answer.replace("\"", "\\\"");
 
             if (i == editWizard.length - 1) configs_AddConfig(siteData, name);
             else editWizardQuest(i++);
@@ -154,9 +183,47 @@ function startEditWizard(configname) {
     editWizardQuest();
 }
 
+function remoteExec(conn, command, cb){
+    conn.exec(command, function(err, stream) {
+        if (err) {
+            throw err;
+            process.exit();
+        }
+
+        stream.on('data', function(data) {
+            console.log(data + "");
+        }).on('close', function() {
+            cb();
+        }).stderr.on('data', function(data) {
+            console.log("❗️  " + (data + "").red);
+            process.exit();
+        });
+    });
+}
+
+function remoteExecQueue(conf, commands, cb){
+    var conn = new ssh();
+    conn.on('ready', function() {
+        var i = 0;
+
+        function rec(data){
+            if(i == commands.length) return conn.end(), cb();
+            console.log("=> " + commands[i].cyan);
+            remoteExec(conn, commands[i++], rec);
+        }
+
+        rec();
+    }).connect({
+        host: conf[keys.SSH_HOST],
+        port: conf[keys.SSH_PORT],
+        username: conf[keys.SSH_USER],
+        privateKey: require('fs').readFileSync(conf[keys.SSH_PKP].replace("~", process.env.HOME + "/"), "utf8")
+    });
+}
+
 // go
 
-if (!fs.existsSync(process.cwd() + "/.git")) {
+if (!sh.test('-e', process.cwd() + "/.git")) {
     console.log("❗️  " + "You not in git repo.".red);
     process.exit();
 }
@@ -207,13 +274,22 @@ if (args[0] == "remove") {
     configs_Remove(args[1]);
 }
 
-if (args[0] == "list") {
-    if (args.length > 1) {
+if (args[0] == "configs" || args[0] == "binders") {
+    if (args.length > 2) {
         console.log("❗️  " + "Too many arguments.".red);
         process.exit();
     }
 
-    configs_List();
+    if(args[1] != "list"){ 
+        console.log("❗️  " + "Invalid command.".red);
+        process.exit();
+    }
+
+    if(args[0] == "configs") configs_List();
+    else {
+        console.log(hookScript);
+        process.exit();
+    }
 }
 
 if (args[0] == "show") {
@@ -231,34 +307,123 @@ if (args[0] == "bind") {
         process.exit();
     }
 
+    if (!configsData[args[1]]) {
+        console.log("❗️  " + "Config with name `".red + args[1] + "` doesn't exist.".red);
+        process.exit();
+    }
+
     var conf = configsData[args[1]].slice();
 
     if (args[2]) {
+        if (args[2] != "with") {
+            console.log("❗️  " + "Unknown command `".red + args[2] + "`.".red);
+            process.exit();
+        }
+
         if (!args[3]) {
             console.log("❗️  " + "You should write branch name.".red);
             process.exit();
         }
 
-        conf.branch = args[3];
+        conf[keys.BRANCH] = args[3];
     }
 
-    var conn = new ssh();
-    conn.on('ready', function() {
-        conn.exec('mkdir ' + conf[keys.SERVER_PATH] + '/.coon-tmp', function(err, stream) {
-            if (err) throw err;
-            stream.on('close', function() {
-                process.exit();
-                conn.end();
-            }).on('data', function(data) {
+    hooks_Add(conf);
+    console.log("🍻  " + "Config `".green + conf[keys.NAME] + "` binded to the `".green + conf[keys.BRANCH] + "` branch.".green);
+    process.exit();
+}
 
-            }).stderr.on('data', function(data) {
-                console.log('STDERR: ' + data);
-            });
-        });
-    }).connect({
-        host: conf[keys.SSH_HOST],
-        port: conf[keys.SSH_PORT],
-        username: conf[keys.SSH_USER],
-        privateKey: require('fs').readFileSync(conf[keys.SSH_PKP].replace("~", process.env.HOME + "/"), "utf8")
+if (args[0] == "unbind") {
+    if (!args[1]) {
+        console.log("❗️  " + "You should write config name.".red);
+        process.exit();
+    }
+
+    if (!configsData[args[1]]) {
+        console.log("❗️  " + "Config with name `".red + args[1] + "` doesn't exist.".red);
+        process.exit();
+    }
+
+    var conf = configsData[args[1]].slice(), withBranch = false;
+
+    if (args[2]) {
+        if (args[2] != "from") {
+            console.log("❗️  " + "Unknown command `".red + args[2] + "`.".red);
+            process.exit();
+        }
+
+        if (!args[3]) {
+            console.log("❗️  " + "You should write branch name.".red);
+            process.exit();
+        }
+
+        conf[keys.BRANCH] = args[3];
+        withBranch = true;
+    }
+
+    hooks_Remove(conf, withBranch);
+    if(withBranch) console.log("🍻  " + "Config `".green + conf[keys.NAME] + "` unbinded from the `".green + conf[keys.BRANCH] + "` branch.".green);
+    else console.log("🍻  " + "Config `".green + conf[keys.NAME] + "` unbinded from the repo.".green);
+    process.exit();
+}
+
+if (args[0] == "deploy") {
+    if (!args[1]) {
+        console.log("❗️  " + "You should write config name.".red);
+        process.exit();
+    }
+
+    if (!configsData[args[1]]) {
+        console.log("❗️  " + "Config with name `".red + args[1] + "` doesn't exist.".red);
+        process.exit();
+    }
+
+    var conf = configsData[args[1]].slice();
+
+    if (args[2]) {
+        if (args[2] != "with") {
+            console.log("❗️  " + "Unknown command `".red + args[2] + "`.".red);
+            process.exit();
+        }
+
+        if (!args[3]) {
+            console.log("❗️  " + "You should write branch name.".red);
+            process.exit();
+        }
+
+        conf[keys.BRANCH] = args[3];
+    }
+    
+    git(["repository", "branch"], function(err ,res){
+        if (err) {
+            console.log("❗️  " + "Something goes wrong.".red);
+            process.exit();
+        }
+
+        if(conf[keys.DEPLOY].trim().length > 0){
+            console.log("=> " + conf[keys.DEPLOY].trim().cyan);
+            sh.exec(conf[keys.DEPLOY].trim());
+        }
+
+        var cmds = [
+            "mkdir -p " + conf[keys.SERVER_PATH] + "/.coon-tmp",
+            "git clone " + res.repository + " " + conf[keys.SERVER_PATH] + "/.coon-tmp/" + (conf[keys.NAME] + " " + conf[keys.BRANCH]).replace(/\s/g, "_"),
+        ];
+
+        if(conf[keys.BRANCH] != "master")
+            cmds.push(
+                "cd " + conf[keys.SERVER_PATH] + "/.coon-tmp/" + (conf[keys.NAME] + " " + conf[keys.BRANCH]).replace(/\s/g, "_") + " \n" +
+                "   git checkout -b " + conf[keys.BRANCH]
+            );
+
+        cmds.push(
+            "mv -f " + conf[keys.SERVER_PATH] + "/.coon-tmp/" + (conf[keys.NAME] + " " + conf[keys.BRANCH]).replace(/\s/g, "_") + "/* " + conf[keys.SERVER_PATH],
+            "rm -rf " + conf[keys.SERVER_PATH] + "/.coon-tmp" 
+        );
+        
+        remoteExecQueue(conf, cmds, function(){
+            console.log("🍻  " + "`".green + conf[keys.BRANCH] + "` branch was successfully deployed on `".green + conf[keys.NAME] + "`.".green);
+            process.exit();
+        })
     });
 }

@@ -2,7 +2,7 @@
     "name": "coon",
     "description": "Utility for deploying site from git.",
     "homepage": "https://github.com/TrigenSoftware/coon",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "engines": {
         "node": ">=0.4.0"
     },
@@ -14,7 +14,10 @@
         "url": "https://github.com/TrigenSoftware/coon.git"
     },
     "dependencies": {
-        "colors": "~0.6.2"
+        "colors": "~0.6.2",
+        "shelljs": "~0.3.0",
+        "ssh2": "~0.3.5",
+        "git-info": "1.0.1"
     },
     "bin": {
         "coon": "coon"
