@@ -2,7 +2,7 @@
     "name": "coon",
     "description": "Utility for deploying site from git.",
     "homepage": "https://github.com/TrigenSoftware/coon",
-    "version": "0.0.5",
+    "version": "0.0.6",
     "engines": {
         "node": ">=0.4.0"
     },
@@ -32,7 +32,8 @@
         "ssh",
         "server",
         "coon",
-        "web"
+        "web",
+        "sites"
     ],
     "author": "Dan Onoshko (dangreen)",
     "license": "GNU GPL v2"

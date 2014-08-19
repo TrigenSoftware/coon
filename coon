@@ -245,7 +245,7 @@ if (args[0] == "add") {
 
     if (siteData.length < addWizard.length)
         startAddWizard(siteData.length);
-}
+} else 
 
 if (args[0] == "edit") {
     if (!args[1]) {
@@ -259,7 +259,7 @@ if (args[0] == "edit") {
     }
 
     startEditWizard(args[1]);
-}
+} else 
 
 if (args[0] == "remove") {
     if (!args[1]) {
@@ -273,7 +273,7 @@ if (args[0] == "remove") {
     }
 
     configs_Remove(args[1]);
-}
+} else 
 
 if (args[0] == "configs" || args[0] == "binders") {
     if (args.length > 2) {
@@ -291,7 +291,7 @@ if (args[0] == "configs" || args[0] == "binders") {
         console.log(hookScript);
         process.exit();
     }
-}
+} else 
 
 if (args[0] == "show") {
     if (!args[1]) {
@@ -300,7 +300,7 @@ if (args[0] == "show") {
     }
 
     configs_Show(args[1]);
-}
+} else 
 
 if (args[0] == "bind") {
     if (!args[1]) {
@@ -332,7 +332,7 @@ if (args[0] == "bind") {
     hooks_Add(conf);
     console.log("🍻  " + "Config `".green + conf[keys.NAME] + "` binded to the `".green + conf[keys.BRANCH] + "` branch.".green);
     process.exit();
-}
+} else 
 
 if (args[0] == "unbind") {
     if (!args[1]) {
@@ -366,7 +366,7 @@ if (args[0] == "unbind") {
     if(withBranch) console.log("🍻  " + "Config `".green + conf[keys.NAME] + "` unbinded from the `".green + conf[keys.BRANCH] + "` branch.".green);
     else console.log("🍻  " + "Config `".green + conf[keys.NAME] + "` unbinded from the repo.".green);
     process.exit();
-}
+} else 
 
 if (args[0] == "deploy" || args[0] == "delay-deploy") {
     if (!args[1]) {
