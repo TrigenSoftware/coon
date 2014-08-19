@@ -252,7 +252,7 @@ if (args[0] == "bind") {
             }).on('data', function(data) {
 
             }).stderr.on('data', function(data) {
-                console.log('STDERR: ' + data);
+                //console.log('STDERR: ' + data);
             });
         });
     }).connect({
