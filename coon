@@ -29,7 +29,7 @@ var keys = {
     DEPLOY: 5,
     BRANCH: 6,
     REPO_DIR: 7,
-    SERVER_PATH: 8 
+    SERVER_PATH: 8
 };
 
 var addWizard = [
@@ -104,8 +104,9 @@ function configs_Show(name) {
         process.exit();
     }
 
-    var conf = configsData[name], out = "";
-    editWizard.forEach(function(wiz, i){
+    var conf = configsData[name],
+        out = "";
+    editWizard.forEach(function(wiz, i) {
         out += wiz[0].replace(" (%def)", "").green + conf[i] + "\n";
     });
 
@@ -249,9 +250,9 @@ if (args[0] == "bind") {
                 process.exit();
                 conn.end();
             }).on('data', function(data) {
-                
+
             }).stderr.on('data', function(data) {
-                console.log('STDERR: ' + data);
+                //console.log('STDERR: ' + data);
             });
         });
     }).connect({
