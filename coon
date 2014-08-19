@@ -12,7 +12,8 @@ var sys = require("util"),
     ssh = require("ssh2"),
     git = require("git-info"),
     cs = require("colors"),
-    sh = require("shelljs");
+    sh = require("shelljs"),
+    fe = require('forever-monitor');
 
 var readline = require('readline')
     .createInterface({
@@ -72,7 +73,7 @@ function hooks_Save() {
 
 function hooks_Add(conf){
     hooks_Remove(conf, true);
-    hookScript += "# deploy " + conf[keys.NAME] + " with " + conf[keys.BRANCH] + "\nnohup ~/github/coon/coon delay-deploy \"" + conf[keys.NAME] + "\" with \"" + conf[keys.BRANCH] + "\"\n";
+    hookScript += "# deploy " + conf[keys.NAME] + " with " + conf[keys.BRANCH] + "\n~/github/coon/coon delay-deploy \"" + conf[keys.NAME] + "\" with \"" + conf[keys.BRANCH] + "\"\n";
     hooks_Save();
 }
 
@@ -394,6 +395,16 @@ if (args[0] == "deploy" || args[0] == "delay-deploy") {
         conf[keys.BRANCH] = args[3];
     }
 
+    if(args[0] == "delay-deploy"){
+        (new (fe.Monitor)('delay-deploy.js', {
+            max: 3,
+            silent: true,
+            options: args
+        })).start();
+
+        process.exit();
+    }
+
     git(["repository", "branch"], function(err ,res){
         if (err) {
             console.log("❗️  " + "Something goes wrong.".red);
@@ -421,17 +432,9 @@ if (args[0] == "deploy" || args[0] == "delay-deploy") {
             "rm -rf " + conf[keys.SERVER_PATH] + "/.coon-tmp" 
         );
 
-        if(args[0] == "deploy")
-            remoteExecQueue(conf, cmds, function(){
-                console.log("🍻  " + "`".green + conf[keys.BRANCH] + "` branch was successfully deployed on `".green + conf[keys.NAME] + "`.".green);
-                process.exit();
-            });
-        else
-            setTimeout(function(){
-                remoteExecQueue(conf, cmds, function(){
-                    console.log("🍻  " + "`".green + conf[keys.BRANCH] + "` branch was successfully deployed on `".green + conf[keys.NAME] + "`.".green);
-                    process.exit();
-                });
-            }, conf[keys.TIMEOUT] * 1000 );
+        remoteExecQueue(conf, cmds, function(){
+            console.log("🍻  " + "`".green + conf[keys.BRANCH] + "` branch was successfully deployed on `".green + conf[keys.NAME] + "`.".green);
+            process.exit();
+        });
     });
 }
