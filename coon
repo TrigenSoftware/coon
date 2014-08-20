@@ -39,10 +39,10 @@ var wizardTemplate = [
     ["SSH host ", false, ""],
     ["SSH user ", false, ""],
     ["Path to SSH private key ", false, ""],
-    ["SSH port ", 22, " (22 by default)"],
-    ["Branch to observe ", "master", " (master by default)"],
-    ["Dir in repo ", ".", " (. by default)"],
-    ["Path on server ", ".", " (. by default)"]
+    ["SSH port ", 22, "(22 by default)"],
+    ["Branch to observe ", "master", "(master by default)"],
+    ["Dir in repo ", ".", "(. by default)"],
+    ["Path on server ", ".", "(. by default)"]
 ];
 
 // hook
@@ -120,7 +120,7 @@ function configs_Show(name) {
     var conf = configsData[name],
         out = "";
     wizardTemplate.forEach(function(wiz, i) {
-        out += (wiz[0].replace(/\w$/, "") + ":").green + conf[i] + "\n";
+        out += (wiz[0].replace(/\w$/, "") + ": ").green + conf[i] + "\n";
     });
 
     console.log(out);
@@ -130,7 +130,7 @@ function configs_Show(name) {
 // helpers
 function startAddWizard(i) {
     function addWizardQuest() {
-        readline.question(wizardTemplate[i][0] + wizardTemplate[i][2] + ":", function(answer) {
+        readline.question(wizardTemplate[i][0] + wizardTemplate[i][2] + ": ", function(answer) {
             if (wizardTemplate[i][1] === false && !answer) {
                 addWizardQuest(i);
                 return;
