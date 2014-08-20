@@ -53,7 +53,7 @@ var editWizard = [
     ["SSH user (%def): ", false],
     ["Path to SSH private key (%def): ", false],
     ["SSH port (%def): ", 22],
-    ["Deploy timout (%def sec): ", 10],
+    ["Deploy timout (%def): ", 10],
     ["Branch to observe (%def): ", "master"],
     ["Dir in repo (%def): ", "."],
     ["Path on server (%def): ", "."]
