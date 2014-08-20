@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/local/bin/node
 
 // coon [add [site name] [ssh host] [ssh user] [ssh password] [ssh port] [path in repo] [path on server]]
 // coon [bind <site name> [to <branch>]]  
@@ -22,7 +22,7 @@ var readline = require('readline')
     }),
     args = process.argv;
 
-// some data
+// some data;
 var keys = {
     NAME: 0,
     SSH_HOST: 1,
@@ -67,7 +67,7 @@ function hooks_Save() {
 
 function hooks_Add(conf){
     hooks_Remove(conf, true);
-    hookScript += "# deploy " + conf[keys.NAME] + " with " + conf[keys.BRANCH] + "\ncoon delay-deploy \"" + conf[keys.NAME] + "\" with \"" + conf[keys.BRANCH] + "\"\n";
+    hookScript += "# deploy " + conf[keys.NAME] + " with " + conf[keys.BRANCH] + "\n" + __dirname + "/coon delay-deploy \"" + conf[keys.NAME] + "\" with \"" + conf[keys.BRANCH] + "\"\n";
     hooks_Save();
 }
 
@@ -426,4 +426,7 @@ if (args[0] == "deploy" || args[0] == "delay-deploy") {
             process.exit();
         });
     });
+} else {
+    console.log(__dirname);
+    process.exit();
 }
