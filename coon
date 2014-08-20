@@ -146,7 +146,7 @@ function startAddWizard(i) {
                 addWizardQuest(i);
                 return;
             } else if (addWizard[i][1] && !answer) answer = addWizard[i][1];
-            siteData[i] = answer.replace("\"", "\\\"");
+            siteData[i] = (answer + "").replace("\"", "\\\"");
 
             if (i == addWizard.length - 1) configs_AddConfig(siteData);
             else addWizardQuest(i++);
@@ -168,7 +168,7 @@ function startEditWizard(configname) {
 
     function editWizardQuest() {
         readline.question(editWizard[i][0].replace("%def", siteData[i]), function(answer) {
-            if (answer) siteData[i] = answer.replace("\"", "\\\"");
+            if (answer) siteData[i] = (answer + "").replace("\"", "\\\"");
 
             if (i == editWizard.length - 1) configs_AddConfig(siteData, name);
             else editWizardQuest(i++);
