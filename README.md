@@ -3,7 +3,7 @@ COON
 
 Utility for deploying site from git.
 
-### To do
+### To do :shipit:
 - Add `help` to util
 - Little documentation
 - Examples of usage
