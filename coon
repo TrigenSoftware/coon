@@ -130,7 +130,7 @@ function configs_Show(name) {
 // helpers
 function startAddWizard(i) {
     function addWizardQuest() {
-        readline.question(wizardTemplate[i][0] + wizardTemplate[i][2], function(answer) {
+        readline.question(wizardTemplate[i][0] + wizardTemplate[i][2] + ":", function(answer) {
             if (wizardTemplate[i][1] === false && !answer) {
                 addWizardQuest(i);
                 return;
@@ -156,7 +156,7 @@ function startEditWizard(configname) {
         name = siteData[0];
 
     function editWizardQuest() {
-        readline.question(wizardTemplate[i][0] + "(" + siteData[i] + ")", function(answer) {
+        readline.question(wizardTemplate[i][0] + "(" + siteData[i] + "): ", function(answer) {
             if (answer) siteData[i] = (answer + "").replace("\"", "\\\"");
 
             if (i == wizardTemplate.length - 1) configs_AddConfig(siteData, name);
