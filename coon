@@ -67,7 +67,7 @@ function hooks_Save() {
 
 function hooks_Add(conf){
     hooks_Remove(conf, true);
-    hookScript += "# deploy " + conf[keys.NAME] + " with " + conf[keys.BRANCH] + "\n" + __dirname + "/coon delay-deploy \"" + conf[keys.NAME] + "\" with \"" + conf[keys.BRANCH] + "\"\n";
+    hookScript += "# deploy " + conf[keys.NAME] + " with " + conf[keys.BRANCH] + "\ncoon delay-deploy \"" + conf[keys.NAME] + "\" with \"" + conf[keys.BRANCH] + "\"\n";
     hooks_Save();
 }
 
