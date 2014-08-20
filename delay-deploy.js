@@ -18,10 +18,9 @@ var keys = {
     SSH_PKP: 3,
     SSH_PORT: 4,
     TIMEOUT: 5,
-    DEPLOY: 6,
-    BRANCH: 7,
-    REPO_DIR: 8,
-    SERVER_PATH: 9
+    BRANCH: 6,
+    REPO_DIR: 7,
+    SERVER_PATH: 8
 };
 
 
@@ -69,7 +68,6 @@ function remoteExecQueue(conf, commands, cb){
 // go
 
 if (!sh.test('-e', process.cwd() + "/.git")) {
-    console.log("❗️  " + "You not in git repo.".red);
     process.exit();
 }
 
@@ -77,12 +75,12 @@ args.splice(0, 2);
 
 if (args[0] == "delay-deploy") {
     if (!args[1]) {
-        console.log("❗️  " + "You should write config name.".red);
+
         process.exit();
     }
 
     if (!configsData[args[1]]) {
-        console.log("❗️  " + "Config with name `".red + args[1] + "` doesn't exist.".red);
+
         process.exit();
     }
 
@@ -90,12 +88,12 @@ if (args[0] == "delay-deploy") {
 
     if (args[2]) {
         if (args[2] != "with") {
-            console.log("❗️  " + "Unknown command `".red + args[2] + "`.".red);
+    
             process.exit();
         }
 
         if (!args[3]) {
-            console.log("❗️  " + "You should write branch name.".red);
+    
             process.exit();
         }
 
@@ -104,13 +102,8 @@ if (args[0] == "delay-deploy") {
 
     git(["repository", "branch"], function(err ,res){
         if (err) {
-            console.log("❗️  " + "Something goes wrong.".red);
+    
             process.exit();
-        }
-
-        if(conf[keys.DEPLOY].trim().length > 0){
-            console.log("=> " + conf[keys.DEPLOY].trim().cyan);
-            sh.exec(conf[keys.DEPLOY].trim());
         }
 
         var cmds = [
@@ -131,13 +124,11 @@ if (args[0] == "delay-deploy") {
 
         if(args[0] == "deploy")
             remoteExecQueue(conf, cmds, function(){
-                console.log("🍻  " + "`".green + conf[keys.BRANCH] + "` branch was successfully deployed on `".green + conf[keys.NAME] + "`.".green);
                 process.exit();
             });
         else
             setTimeout(function(){
                 remoteExecQueue(conf, cmds, function(){
-                    console.log("🍻  " + "`".green + conf[keys.BRANCH] + "` branch was successfully deployed on `".green + conf[keys.NAME] + "`.".green);
                     process.exit();
                 });
             }, conf[keys.TIMEOUT] * 1000 );
