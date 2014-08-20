@@ -22,7 +22,7 @@ var readline = require('readline')
     }),
     args = process.argv;
 
-// some data;
+// some data
 var keys = {
     NAME: 0,
     SSH_HOST: 1,
