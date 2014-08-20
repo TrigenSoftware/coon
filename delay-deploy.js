@@ -17,10 +17,9 @@ var keys = {
     SSH_USER: 2,
     SSH_PKP: 3,
     SSH_PORT: 4,
-    TIMEOUT: 5,
-    BRANCH: 6,
-    REPO_DIR: 7,
-    SERVER_PATH: 8
+    BRANCH: 5,
+    REPO_DIR: 6,
+    SERVER_PATH: 7
 };
 
 
@@ -122,15 +121,15 @@ if (args[0] == "delay-deploy") {
             "rm -rf " + conf[keys.SERVER_PATH] + "/.coon-tmp" 
         );
 
-        if(args[0] == "deploy")
-            remoteExecQueue(conf, cmds, function(){
-                process.exit();
-            });
-        else
-            setTimeout(function(){
+        
+        var seeker = setInterval(function(){
+            var lsof = sh.exec("lsof | grep git", {silent:true}).output;
+            if(lsof.match(/(^|\n)git .*\n/g) == null){
+                clearInterval(seeker);
                 remoteExecQueue(conf, cmds, function(){
                     process.exit();
                 });
-            }, conf[keys.TIMEOUT] * 1000 );
+            }
+        }, 2000 );
     });
 }

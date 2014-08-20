@@ -29,10 +29,9 @@ var keys = {
     SSH_USER: 2,
     SSH_PKP: 3,
     SSH_PORT: 4,
-    TIMEOUT: 5,
-    BRANCH: 6,
-    REPO_DIR: 7,
-    SERVER_PATH: 8
+    BRANCH: 5,
+    REPO_DIR: 6,
+    SERVER_PATH: 7
 };
 
 var addWizard = [
@@ -41,7 +40,6 @@ var addWizard = [
     ["SSH user: ", false],
     ["Path to SSH private key: ", false],
     ["SSH port (22 by default): ", 22],
-    ["Deploy timout (10 sec by default): ", 10],
     ["Branch to observe (master by default): ", "master"],
     ["Dir in repo (. by default): ", "."],
     ["Path on server (. by default): ", "."]
@@ -53,7 +51,6 @@ var editWizard = [
     ["SSH user (%def): ", false],
     ["Path to SSH private key (%def): ", false],
     ["SSH port (%def): ", 22],
-    ["Deploy timout (%def): ", 10],
     ["Branch to observe (%def): ", "master"],
     ["Dir in repo (%def): ", "."],
     ["Path on server (%def): ", "."]
