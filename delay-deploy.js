@@ -117,7 +117,7 @@ if (args[0] == "delay-deploy") {
             );
 
         cmds.push(
-            "mv -f " + conf[keys.SERVER_PATH] + "/.coon-tmp/" + (conf[keys.NAME] + " " + conf[keys.BRANCH]).replace(/\s/g, "_") + "/* " + conf[keys.SERVER_PATH],
+            "mv -f " + conf[keys.SERVER_PATH] + "/.coon-tmp/" + (conf[keys.NAME] + " " + conf[keys.BRANCH]).replace(/\s/g, "_") + "/" + conf[keys.REPO_DIR] + "/* " + conf[keys.SERVER_PATH],
             "rm -rf " + conf[keys.SERVER_PATH] + "/.coon-tmp" 
         );
 
