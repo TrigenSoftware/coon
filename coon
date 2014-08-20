@@ -6,14 +6,14 @@
 "use strict";
 
 // require
-var sys = require("util"),
-    fs = require("fs"),
+var sys  = require("util"),
+    fs   = require("fs"),
     path = require("path"),
-    ssh = require("ssh2"),
-    git = require("git-info"),
-    cs = require("colors"),
-    sh = require("shelljs"),
-    fe = require('forever-monitor');
+    ssh  = require("ssh2"),
+    git  = require("git-info"),
+    cs   = require("colors"),
+    sh   = require("shelljs"),
+    fe   = require('forever-monitor');
 
 var readline = require('readline')
     .createInterface({
@@ -120,7 +120,7 @@ function configs_Show(name) {
     var conf = configsData[name],
         out = "";
     wizardTemplate.forEach(function(wiz, i) {
-        out += wiz[0].replace(" (%def)", "").green + conf[i] + "\n";
+        out += (wiz[0].replace(/\w$/, "") + ":").green + conf[i] + "\n";
     });
 
     console.log(out);
@@ -258,22 +258,23 @@ if (args[0] == "remove") {
     configs_Remove(args[1]);
 } else 
 
-if (args[0] == "configs" || args[0] == "binders") {
+if (args[0] == "show") {
     if (args.length > 2) {
         console.log("❗️  " + "Too many arguments.".red);
         process.exit();
     }
 
-    if(args[1] != "list"){ 
+    if(args[1] == "configs") 
+        configs_List();
+    else 
+    if(args[1] == "binders"){
+        console.log(hookScript);
+        process.exit();
+    } else {
         console.log("❗️  " + "Invalid command.".red);
         process.exit();
     }
 
-    if(args[0] == "configs") configs_List();
-    else {
-        console.log(hookScript);
-        process.exit();
-    }
 } else 
 
 if (args[0] == "show") {
