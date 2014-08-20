@@ -9,4 +9,4 @@ Utility for deploying site from git.
 - Examples of usage
 
 ### Preview
-![logo](https://raw.githubusercontent.com/TrigenSoftware/ColaScript/master/colalogo.png)
+![logo](https://raw.githubusercontent.com/TrigenSoftware/coon/master/preview.png)
