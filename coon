@@ -427,6 +427,5 @@ if (args[0] == "deploy" || args[0] == "delay-deploy") {
         });
     });
 } else {
-    console.log(__dirname);
     process.exit();
 }
