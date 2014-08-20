@@ -34,26 +34,15 @@ var keys = {
     SERVER_PATH: 7
 };
 
-var addWizard = [
-    ["Config name: ", false],
-    ["SSH host: ", false],
-    ["SSH user: ", false],
-    ["Path to SSH private key: ", false],
-    ["SSH port (22 by default): ", 22],
-    ["Branch to observe (master by default): ", "master"],
-    ["Dir in repo (. by default): ", "."],
-    ["Path on server (. by default): ", "."]
-];
-
-var editWizard = [
-    ["Config name (%def): ", false],
-    ["SSH host (%def): ", false],
-    ["SSH user (%def): ", false],
-    ["Path to SSH private key (%def): ", false],
-    ["SSH port (%def): ", 22],
-    ["Branch to observe (%def): ", "master"],
-    ["Dir in repo (%def): ", "."],
-    ["Path on server (%def): ", "."]
+var wizardTemplate = [
+    ["Config name ", false, ""],
+    ["SSH host ", false, ""],
+    ["SSH user ", false, ""],
+    ["Path to SSH private key ", false, ""],
+    ["SSH port ", 22, " (22 by default)"],
+    ["Branch to observe ", "master", " (master by default)"],
+    ["Dir in repo ", ".", " (. by default)"],
+    ["Path on server ", ".", " (. by default)"]
 ];
 
 // hook
@@ -130,7 +119,7 @@ function configs_Show(name) {
 
     var conf = configsData[name],
         out = "";
-    editWizard.forEach(function(wiz, i) {
+    wizardTemplate.forEach(function(wiz, i) {
         out += wiz[0].replace(" (%def)", "").green + conf[i] + "\n";
     });
 
@@ -141,14 +130,14 @@ function configs_Show(name) {
 // helpers
 function startAddWizard(i) {
     function addWizardQuest() {
-        readline.question(addWizard[i][0], function(answer) {
-            if (addWizard[i][1] === false && !answer) {
+        readline.question(wizardTemplate[i][0] + wizardTemplate[i][2], function(answer) {
+            if (wizardTemplate[i][1] === false && !answer) {
                 addWizardQuest(i);
                 return;
-            } else if (addWizard[i][1] && !answer) answer = addWizard[i][1];
+            } else if (wizardTemplate[i][1] && !answer) answer = wizardTemplate[i][1];
             siteData[i] = (answer + "").replace("\"", "\\\"");
 
-            if (i == addWizard.length - 1) configs_AddConfig(siteData);
+            if (i == wizardTemplate.length - 1) configs_AddConfig(siteData);
             else addWizardQuest(i++);
         });
     }
@@ -167,10 +156,10 @@ function startEditWizard(configname) {
         name = siteData[0];
 
     function editWizardQuest() {
-        readline.question(editWizard[i][0].replace("%def", siteData[i]), function(answer) {
+        readline.question(wizardTemplate[i][0] + "(" + siteData[i] + ")", function(answer) {
             if (answer) siteData[i] = (answer + "").replace("\"", "\\\"");
 
-            if (i == editWizard.length - 1) configs_AddConfig(siteData, name);
+            if (i == wizardTemplate.length - 1) configs_AddConfig(siteData, name);
             else editWizardQuest(i++);
         });
     }
@@ -230,14 +219,14 @@ if (args[0] == "add") {
 
     args.splice(0, 1);
     args.forEach(function(arg, i) {
-        if (i >= addWizard.length) {
+        if (i >= wizardTemplate.length) {
             console.log("❗️  " + "Too many arguments.".red);
             process.exit();
         }
         siteData.push(arg);
     });
 
-    if (siteData.length < addWizard.length)
+    if (siteData.length < wizardTemplate.length)
         startAddWizard(siteData.length);
 } else 
 
