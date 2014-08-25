@@ -18,19 +18,19 @@
 
         remove 
             all <configs | hosts | deploys>
-            host <name>
-            deploy <name>
+            host <name> [with <branch>]
+            deploy <name> [with <branch>]
 
         edit <deploy | host> <name>
             "wizard" or
             [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>]  
-
 
         deploy <deploy-name> to <host-name>
             [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] 
         // delay-deploy <deploy-name> <host-name> [branch-name]
         
         build <deploy-name>
+            [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>]
 
         bind <deploy-name> to <host-name>
             [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] 
