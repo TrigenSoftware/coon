@@ -125,7 +125,7 @@ function EditWizard(props, conf, end){
 
 try {
 
-switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "build", "deploy", "bind", "unbind")){
+switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "build", "deploy", "delay-deploy", "bind", "unbind")){
     case "version": 
         var json = require("./package.json");
         console.log(json.name + ' ' + json.version);
