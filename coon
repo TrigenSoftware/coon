@@ -449,7 +449,7 @@ switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "
         for(var key in tprops) if(tprops.hasOwnProperty(key)) {
             props[key.replace(/-/g, "_")] = tprops[key];
         }
-
+        console.log(props);
         coon.build(name, tprops, true);
 
         cli.end();
