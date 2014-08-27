@@ -55,7 +55,7 @@ function FilterProps(props, obj){
     var res = {};
 
     props.forEach(function(prop){
-        res[prop] = obj[prop];
+        if(obj[prop]) res[prop] = obj[prop];
     });
 
     return res;
@@ -499,7 +499,7 @@ switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "
         for(var key in tprops) if(tprops.hasOwnProperty(key)) {
             props[key.replace(/-/g, "_")] = tprops[key];
         }
-
+        
         coon.delayDeploy(
             name, FilterProps(coon.ConfigsStorage.deployProps, props), 
             host_name, FilterProps(coon.ConfigsStorage.hostProps, props));
