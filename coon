@@ -17,9 +17,11 @@
         show <configs | hosts | deploys>
 
         remove 
-            all <configs | hosts | deploys>
-            host <name> [with <branch>]
-            deploy <name> [with <branch>]
+            all <hosts | deploys>
+            host <name>
+            deploy <name>
+
+        clear
 
         edit <deploy | host> <name>
             "wizard" or
@@ -39,5 +41,507 @@
 
 */ 
 
+var coon = require("./coon.js"),
+    cli  = require("argue-cli"),
+    cs   = require("colors");
 
+var readline = require('readline')
+    .createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
 
+function FilterProps(props, obj){
+    var res = {};
+
+    props.forEach(function(prop){
+        res[prop] = obj[prop];
+    });
+
+    return res;
+}
+
+function ConcatArrays(arr1, arr2){
+    var res = [];
+
+    arr1.forEach(function(val){
+        res.push(val);
+    });
+
+    arr2.forEach(function(val){
+        res.push(val);
+    });
+
+    return res;
+}
+
+function ConcatObjects(obj1, obj2){
+    var res = {};
+
+    for(var key in obj1) if(obj1.hasOwnProperty(key)){
+        res[key] = obj1[key];
+    }
+
+    for(var key in obj2) if(obj2.hasOwnProperty(key)){
+        res[key] = obj2[key];
+    }
+
+    return res;
+}
+
+function Wizard(props, defs, end){
+    var conf = {}, i = 0;
+
+    function next() {
+        readline.question(props[i] + ( defs[props[i]] ? (" (" + defs[props[i]] + " by default): ") : ": " ), function(answer) {
+            if (defs[props[i]] === undefined && !answer)
+                return next();
+            else 
+            if (defs[props[i]] !== undefined && !answer) answer = defs[props[i]];
+            conf[props[i]] = (answer + "").replace("\"", "\\\"");
+
+            if (i == props.length - 1) end(conf);
+            else next(i++);
+        });
+    }
+
+    next();
+}
+
+function EditWizard(props, conf, end){
+    var i = 0;
+    
+    function next() {
+        readline.question(props[i] + " (" + conf[props[i]] + "): ", function(answer) {
+            if (answer) conf[props[i]] = (answer + "").replace("\"", "\\\"");
+
+            if (i == props.length - 1) end(conf);
+            else next(i++);
+        });
+    }
+
+    next();
+}
+
+try {
+
+switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "build", "deploy", "bind", "unbind")){
+    case "version": 
+        var json = require("./package.json");
+        console.log(json.name + ' ' + json.version);
+        process.exit();
+
+    case "show":
+        switch(cli.expect("host", "hosts", "deploy", "deploys", "build-hook", "deploy-hook")){
+            case "host":
+                var name = cli.read();
+                coon.ConfigsStorage.openHosts();
+
+                if(!coon.ConfigsStorage.hosts[name]) throw new Error("Host config with name `" + name + "` doesn't exist.");
+
+                coon.ConfigsStorage.hostProps.forEach(function(prop){
+                    console.log(prop.green + ": " + coon.ConfigsStorage.hosts[name][prop]);
+                });
+
+                cli.end();
+                process.exit();
+
+            case "hosts":
+                var empty = true;
+                coon.ConfigsStorage.openHosts();
+                for(var key in coon.ConfigsStorage.hosts){
+                    console.log(key.green);   
+                    empty = false;
+                }
+                
+                if(empty) console.log("<empty>".red);
+                cli.end();
+                process.exit();
+
+            case "deploy":
+                var name = cli.read();
+                coon.ConfigsStorage.openDeploys();
+
+                if(!coon.ConfigsStorage.deploys[name]) throw new Error("Deploy config with name `" + name + "` doesn't exist.");
+
+                coon.ConfigsStorage.deployProps.forEach(function(prop){
+                    console.log(prop.green + ": " + coon.ConfigsStorage.deploys[name][prop]);
+                });
+
+                cli.end();
+                process.exit();
+
+            case "deploys":
+                var empty = true;
+                coon.ConfigsStorage.openDeploys();
+                for(var key in coon.ConfigsStorage.deploys){
+                    console.log(key.green);   
+                    empty = false;
+                }
+                
+                if(empty) console.log("<empty>".red);
+                cli.end();
+                process.exit();
+
+            case "build-hook":
+                coon.ScriptsStorage.openBuilds();
+                console.log(coon.ScriptsStorage.pre_commit);
+
+                cli.end();
+                process.exit();
+
+            case "deploy-hook":
+                coon.ScriptsStorage.openDeploys();
+                console.log(coon.ScriptsStorage.pre_push);
+
+                cli.end();
+                process.exit();
+        }
+
+    case "add":
+        var name = cli.read();
+        switch(name){
+            case "host":
+                name = cli.read();
+                
+                if(cli.options({ "w": "wizard" }).wizard){
+                    cli.end();
+
+                    Wizard(coon.ConfigsStorage.hostProps, coon.ConfigsStorage.hostDefs, function(props){
+                        coon.ConfigsStorage.openHosts();
+                        coon.ConfigsStorage.addHost(name, props);
+                        coon.ConfigsStorage.saveHosts();
+
+                        cli.end();
+                        process.exit();
+                    });
+                } else {    
+                    var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port"), props = {};
+
+                    for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+                        props[key.replace(/-/g, "_")] = tprops[key];
+                    }
+
+                    coon.ConfigsStorage.openHosts();
+                    coon.ConfigsStorage.addHost(name, props);
+                    coon.ConfigsStorage.saveHosts();
+
+                    cli.end();
+                    process.exit();
+                }
+
+                break;
+
+            case "deploy":
+                name = cli.read();
+                
+                if(cli.options({ "w": "wizard" }).wizard){
+                    cli.end();
+
+                    Wizard(coon.ConfigsStorage.deployProps, coon.ConfigsStorage.deployDefs, function(props){
+                        coon.ConfigsStorage.openDeploys();
+                        coon.ConfigsStorage.addDeploy(name, props);
+                        coon.ConfigsStorage.saveDeploys();
+
+                        cli.end();
+                        process.exit();
+                    });
+
+                    break;
+                } else {    
+                    var tprops = cli.values("branch", "build-command", "source", "target"), props = {};
+
+                    for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+                        props[key.replace(/-/g, "_")] = tprops[key];
+                    }
+
+                    coon.ConfigsStorage.openDeploys();
+                    coon.ConfigsStorage.addDeploy(name, props);
+                    coon.ConfigsStorage.saveDeploys();
+
+                    cli.end();
+                    process.exit();
+                }
+
+                break;
+
+            default:
+                cli.expect("with");
+                var deploy_name = cli.read();
+
+                if(cli.options({ "w": "wizard" }).wizard){
+                    cli.end();
+
+                    Wizard(ConcatArrays(coon.ConfigsStorage.hostProps, coon.ConfigsStorage.deployProps), ConcatObjects(coon.ConfigsStorage.hostDefs, coon.ConfigsStorage.deployDefs), function(props){
+                        coon.ConfigsStorage.openHosts();
+                        coon.ConfigsStorage.addHost(name, FilterProps(coon.ConfigsStorage.hostProps, props));
+                        coon.ConfigsStorage.saveHosts();
+
+                        coon.ConfigsStorage.openDeploys();
+                        coon.ConfigsStorage.addDeploy(deploy_name, FilterProps(coon.ConfigsStorage.deployProps, props));
+                        coon.ConfigsStorage.saveDeploys();
+
+                        cli.end();
+                        process.exit();
+                    });
+
+                    break;
+                } else {    
+                    var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target"), props = {};
+
+                    for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+                        props[key.replace(/-/g, "_")] = tprops[key];
+                    }
+
+                    coon.ConfigsStorage.openHosts();
+                    coon.ConfigsStorage.addHost(name, FilterProps(coon.ConfigsStorage.hostProps, props));
+                    coon.ConfigsStorage.saveHosts();
+
+                    coon.ConfigsStorage.openDeploys();
+                    coon.ConfigsStorage.addDeploy(deploy_name, FilterProps(coon.ConfigsStorage.deployProps, props));
+                    coon.ConfigsStorage.saveDeploys();
+
+                    cli.end();
+                    process.exit();
+                }
+
+                break;
+        }
+
+        break;
+
+    case "remove":
+        switch(cli.expect("all", "host", "deploy")){
+            case "all":
+                if(cli.args.length == 0){
+                    coon.ConfigsStorage.openHosts();
+                    coon.ConfigsStorage.openDeploys();
+
+                    coon.ConfigsStorage.hosts = {};
+                    coon.ConfigsStorage.deploys = {};
+
+                    coon.ConfigsStorage.saveHosts();
+                    coon.ConfigsStorage.saveDeploys();
+
+                    cli.end();
+                    process.exit();
+                } else switch(cli.expect("hosts", "deploys")){
+                    case "hosts":
+                        coon.ConfigsStorage.openHosts();
+
+                        coon.ConfigsStorage.hosts = {};
+
+                        coon.ConfigsStorage.saveHosts();
+
+                        cli.end();
+                        process.exit();
+
+                    case "deploys":
+                        coon.ConfigsStorage.openDeploys();
+
+                        coon.ConfigsStorage.deploys = {};
+
+                        coon.ConfigsStorage.saveDeploys();
+
+                        cli.end();
+                        process.exit();
+                }
+
+            case "host":
+                coon.ConfigsStorage.openHosts();
+
+                coon.ConfigsStorage.removeHost(cli.read());
+
+                coon.ConfigsStorage.saveHosts();
+
+                cli.end();
+                process.exit();
+
+            case "deploy":
+                coon.ConfigsStorage.openDeploys();
+
+                coon.ConfigsStorage.removeDeploy(cli.read());
+
+                coon.ConfigsStorage.saveDeploys();
+
+                cli.end();
+                process.exit();
+        }
+
+    case "clear":
+        coon.clear();
+
+        cli.end();
+        process.exit();
+
+    case "edit":
+        switch(cli.expect("host", "deploy")){
+            case "host":
+                var name = cli.read();
+                
+                if(cli.options({ "w": "wizard" }).wizard){
+                    cli.end();
+                    coon.ConfigsStorage.openHosts();
+
+                    EditWizard(coon.ConfigsStorage.hostProps, coon.ConfigsStorage.hosts[name], function(props){
+                        coon.ConfigsStorage.hosts[name] = props;
+                        coon.ConfigsStorage.saveHosts();
+
+                        cli.end();
+                        process.exit();
+                    });
+                } else {    
+                    var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port");
+
+                    coon.ConfigsStorage.openHosts();
+
+                    for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+                        coon.ConfigsStorage.hosts[name][key.replace(/-/g, "_")] = tprops[key];
+                    }
+
+                    coon.ConfigsStorage.saveHosts();
+
+                    cli.end();
+                    process.exit();
+                }
+
+                break;
+
+            case "deploy":
+                var name = cli.read();
+                
+                if(cli.options({ "w": "wizard" }).wizard){
+                    cli.end();
+                    coon.ConfigsStorage.openDeploys();
+
+                    EditWizard(coon.ConfigsStorage.deployProps, coon.ConfigsStorage.deploys[name], function(props){
+                        coon.ConfigsStorage.deploys[name] = props;
+                        coon.ConfigsStorage.saveDeploys();
+
+                        cli.end();
+                        process.exit();
+                    });
+
+                    break;
+                } else {    
+                    var tprops = cli.values("branch", "build-command", "source", "target");
+
+                    coon.ConfigsStorage.openDeploys();
+
+                    for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+                        coon.ConfigsStorage.deploys[name][key.replace(/-/g, "_")] = tprops[key];
+                    }
+
+                    coon.ConfigsStorage.saveDeploys();
+
+                    cli.end();
+                    process.exit();
+                }
+
+                break;
+        }
+
+        break;
+
+    case "build":
+        var name = cli.read(), tprops = cli.values("branch", "build-command", "source", "target"), props = {};
+
+        for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+            props[key.replace(/-/g, "_")] = tprops[key];
+        }
+
+        coon.build(name, tprops, true);
+
+        cli.end();
+        process.exit();
+
+    case "deploy":
+        var name = cli.read();
+        cli.expect("to");
+        var host_name = cli.read();
+
+        var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target"), props = {};
+
+        for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+            props[key.replace(/-/g, "_")] = tprops[key];
+        }
+
+        cli.end();
+        coon.deploy(
+            name, FilterProps(coon.ConfigsStorage.deployProps, props), 
+            host_name, FilterProps(coon.ConfigsStorage.hostProps, props), 
+            function(data, type){
+                switch(type){
+                    case "command": 
+                        console.log("=> " + data.cyan);
+                        break;
+
+                    case "data":
+                        process.stdout.write(data);
+                        break;
+
+                    case "error":
+                        process.stdout.write("❗️  " + data.red);
+                }
+            }, function(){
+                process.exit();
+            });
+
+        break;
+
+    case "delay-deploy":
+        var name = cli.read();
+        cli.expect("to");
+        var host_name = cli.read();
+
+        var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target"), props = {};
+
+        for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+            props[key.replace(/-/g, "_")] = tprops[key];
+        }
+
+        coon.delayDeploy(
+            name, FilterProps(coon.ConfigsStorage.deployProps, props), 
+            host_name, FilterProps(coon.ConfigsStorage.hostProps, props));
+
+        cli.end();
+        process.exit();
+
+    case "bind":
+        var name = cli.read();
+        cli.expect("to");
+        var host_name = cli.read();
+
+        var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target"), props = {};
+
+        for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+            props[key.replace(/-/g, "_")] = tprops[key];
+        }
+
+        coon.bind(
+            name, FilterProps(coon.ConfigsStorage.deployProps, props), 
+            host_name, FilterProps(coon.ConfigsStorage.hostProps, props));
+
+        cli.end();
+        process.exit();
+
+    case "unbind":
+        var name = cli.read(), host_name;
+        if(cli.args.length == 2){
+            cli.expect("from");
+            host_name = cli.read();
+        }
+
+        coon.unbind(name, host_name);
+
+        cli.end();
+        process.exit();
+}
+
+} catch (e) {
+    console.log("❗️  " + e.message.red);
+    process.exit();
+}
+
+//cli.end();
+//process.exit();s
