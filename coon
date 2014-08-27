@@ -450,7 +450,7 @@ switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "
             props[key.replace(/-/g, "_")] = tprops[key];
         }
 
-        coon.build(name, tprops, true);
+        coon.build(name, props, true);
 
         cli.end();
         process.exit();
