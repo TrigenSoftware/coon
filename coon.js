@@ -390,6 +390,7 @@ function Deploy (name, config, host_name, host_config, print, end) {
 
 	var commands = [
         "mkdir -p " + config.target + "/.coon-tmp",
+        "rm -rf " + config.target + "/.coon-tmp/" + ( name + " " + config.branch).replace(/\s/g, "_"),
         "git clone " + __remote + " " + config.target + "/.coon-tmp/" + ( name + " " + config.branch).replace(/\s/g, "_")
     ];
 
@@ -406,7 +407,7 @@ function Deploy (name, config, host_name, host_config, print, end) {
     );
 
     commands.push(
-        "mv -f " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/" + config.source + "/* " + config.target,
+        "rsync -a " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/" + config.source + "/* " + config.target,
         "rm -rf " + config.target + "/.coon-tmp" 
     );
 
