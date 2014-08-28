@@ -407,7 +407,7 @@ function Deploy (name, config, host_name, host_config, print, end) {
     );
 
     commands.push(
-        "rsync -a " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/" + config.source + "/* " + config.target,
+        "rsync -a --delete-before " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/" + config.source + "/* " + config.target,
         "rm -rf " + config.target + "/.coon-tmp" 
     );
 
