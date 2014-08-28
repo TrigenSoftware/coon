@@ -227,6 +227,8 @@ ScriptsStorage.saveDeploys = function () {
 
 ScriptsStorage.addBuild = function (name, host_name, config) {
 	if(!__git) throw new Error("You are not in git repo.");
+	if(this.pre_commit.indexOf("# build " + name + " for " + host_name + "\n") != -1)
+		throw new Error("Already binded.");
 
 	this.pre_commit += 
 		"# build " + name + " for " + host_name + "\n" 
@@ -238,6 +240,8 @@ ScriptsStorage.addBuild = function (name, host_name, config) {
 
 ScriptsStorage.addDeploy = function (name, host_name, config) {
 	if(!__git) throw new Error("You are not in git repo.");
+	if(this.pre_push.indexOf("# deploy " + name + " to " + host_name + "\n") != -1)
+		throw new Error("Already binded.");
 
 	this.pre_push += 
 		"# deploy " + name + " to " + host_name + "\n" 
