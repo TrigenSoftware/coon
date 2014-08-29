@@ -390,8 +390,9 @@ function Deploy (name, config, host_name, host_config, print, end) {
 
 	var commands = [
         "mkdir -p " + config.target + "/.coon-tmp",
-        "rm -rf " + config.target + "/.coon-tmp/" + ( name + " " + config.branch).replace(/\s/g, "_"),
-        "git clone " + __remote + " " + config.target + "/.coon-tmp/" + ( name + " " + config.branch).replace(/\s/g, "_")
+        "rm -rf " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_"),
+        "[ ! -e \"" + config.target + "/.coon-files-" + ( name + " " + config.branch ).replace(/\s/g, "-") + "\" ] && touch \"" + config.target + "/.coon-files-" + ( name + " " + config.branch ).replace(/\s/g, "-") + "\"",
+        "git clone " + __remote + " " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_")
     ];
 
     if(config.branch == "*")
@@ -407,7 +408,14 @@ function Deploy (name, config, host_name, host_config, print, end) {
     );
 
     commands.push(
-        "rsync -a --delete-before " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/" + config.source + "/* " + config.target,
+    	//"find \"" + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + 
+    	//"\" -path \"" + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/.git\" " +
+    	//"-prune -o -regextype posix-extended -regex \"\\..+\"  -exec replace \"{}\" \"\" -- \"" + config.target + "/.coon-files-" + ( name + " " + config.branch ).replace(/\s/g, "-") + "\" \\;",
+        
+        "cd " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + " \n" +
+        "   find . -path ./.git -prune -o -regextype posix-extended -regex \"\\..+\" -exec echo \"{}\" \\; >> \"../../.coon-files-" + ( name + " " + config.branch ).replace(/\s/g, "-") + "\"",
+
+        "rsync -a " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/" + config.source + "/* " + config.target,
         "rm -rf " + config.target + "/.coon-tmp" 
     );
 
