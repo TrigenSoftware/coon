@@ -333,6 +333,7 @@ RemoteExec.exec = function (conn, command, print, end) {
             end();
         }).stderr.on('data', function(data) {
         	data = data + "";
+        	if(data.indexOf("-bash: ") == 0) return;
             print(data, data.indexOf("Switched to a new branch") == -1 ? "error" : "data");
             if(data.indexOf("Switched to a new branch") == -1) process.exit();
         });
@@ -413,7 +414,13 @@ function Deploy (name, config, host_name, host_config, print, end) {
 
         "cd " + config.target + "\n" + 
         "   while read line; do\n" +
-		"       if [ ! -z \"$line\" ]; then\n" + 
+		"       if [ ! -z \"$line\" ] && [ -f \"$line\" ]; then\n" + 
+		"           echo \"$line will be deleted\"\n" + 
+		"           rm -rf \"$line\"\n" + 
+		"       fi\n" + 
+		"   done < \".coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\"\n" +
+        "   while read line; do\n" +
+		"       if [ ! -z \"$line\" ] && [ ! -f \"$line\" ] && [ ! $(ls -A \"$line\") ]; then\n" + 
 		"           echo \"$line will be deleted\"\n" + 
 		"           rm -rf \"$line\"\n" + 
 		"       fi\n" + 
