@@ -408,12 +408,12 @@ function Deploy (name, config, host_name, host_config, print, end) {
     );
 
     commands.push(
-    	//"cd " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + " \n" +
-        //"   find . -path ./.git -prune -o -regextype posix-extended -regex \"\\..+\" -exec replace \"{}\\n\" \"\" -- \"../../.coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\" \\;",
+    	"cd " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + " \n" +
+        "   find . -path ./.git -prune -o -regextype posix-extended -regex \"\\..+\" -exec replace \"{}\\n\" \"\" -- \"../../.coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\" \\;",
 
-        "cd " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + " \n" +
-        "   rm \"../../.coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\"\n" +
-        "   find . -path ./.git -prune -o -regextype posix-extended -regex \"\\..+\" -exec echo \"{}\" \\; >> \"../../.coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\"",
+        //"cd " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + " \n" +
+        //"   rm \"../../.coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\"\n" +
+        //"   find . -path ./.git -prune -o -regextype posix-extended -regex \"\\..+\" -exec echo \"{}\" \\; >> \"../../.coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\"",
 
         "rsync -a " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/" + config.source + "/* " + config.target,
         "rm -rf " + config.target + "/.coon-tmp" 
