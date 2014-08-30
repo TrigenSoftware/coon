@@ -409,18 +409,18 @@ function Deploy (name, config, host_name, host_config, print, end) {
     );
 
     commands.push(
-    	"cd " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + " \n" +
-        "   find . -path ./.git -prune -o -regextype posix-extended -regex \"\\..+\" -exec replace -s \"{}\" \"\" -- \"../../.coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\" \\;",
+    	// "cd " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + " \n" +
+        // "   find . -path ./.git -prune -o -regextype posix-extended -regex \"\\..+\" -exec replace \"{}\" \"\" -- \"../../.coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\" \\;",
 
         "cd " + config.target + "\n" + 
         "   while read line; do\n" +
-		"       if [ ! -z \"$line\" ] && [ -f \"$line\" ]; then\n" + 
+		"       if [ ! -z \"$line\" ] && [ -f \"$line\" ] && [ ! -f \".coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/$line\" ]; then\n" + 
 		"           echo \"$line will be deleted\"\n" + 
 		"           rm -rf \"$line\"\n" + 
 		"       fi\n" + 
 		"   done < \".coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\"\n" +
         "   while read line; do\n" +
-		"       if [ ! -z \"$line\" ] && [ ! -f \"$line\" ] && [ ! $(ls -A \"$line\") ]; then\n" + 
+		"       if [ ! -z \"$line\" ] && [ -d \"$line\" ] && [ ! -d \".coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/$line\" ]; then\n" + 
 		"           echo \"$line will be deleted\"\n" + 
 		"           rm -rf \"$line\"\n" + 
 		"       fi\n" + 
