@@ -420,7 +420,7 @@ function Deploy (name, config, host_name, host_config, print, end) {
 		"       fi\n" + 
 		"   done < \".coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\"\n" +
         "   while read line; do\n" +
-		"       if [ ! -z \"$line\" ] && [ -d \"$line\" ] && [ ! -d \".coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/$line\" ]; then\n" + 
+		"       if [ ! -z \"$line\" ] && [ -d \"$line\" ] && [ ! -d \".coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/$line\" ] && [ ! $(ls -A \"$line\") ]; then\n" + 
 		"           echo \"$line will be deleted\"\n" + 
 		"           rm -rf \"$line\"\n" + 
 		"       fi\n" + 
