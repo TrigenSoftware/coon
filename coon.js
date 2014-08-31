@@ -335,10 +335,8 @@ RemoteExec.exec = function (conn, command, print, end) {
             end();
         }).stderr.on('data', function(data) {
         	data = data + "";
-        	print(data, "message");
-        	//if(data.indexOf("-bash: ") == 0) return;
-            //print(data, data.indexOf("Switched to a new branch") == -1 ? "error" : "data");
-            //if(data.indexOf("Switched to a new branch") == -1) process.exit();
+        	if(data.indexOf("-bash: ") == 0) return;
+        	print(data, "data");
         });
     });
 }
