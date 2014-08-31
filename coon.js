@@ -418,21 +418,19 @@ function Deploy (name, config, host_name, host_config, print, end) {
 	} else {
 		commands.push(
 			"cd " + config.target + "/.coon/\n" +
-			"   if [ -f \"" + repo_dir + "\"]; then\n" +
+			"   if [ -d \"" + repo_dir + "\" ]; then\n" +
 			"   	cd \"" + repo_dir + "\"\n" + 
 			"   	git pull\n" +
 			"   else\n" +
 			"   	git clone " + __remote + " " + repo_dir + "\n" +
 			(function(){
 				if(config.branch == "*"){ 
-					return 
-						"   	cd \"" + repo_dir + "\"\n" + 
-						"   	git checkout " + __branch + "\n";
+					return "   	cd \"" + repo_dir + "\"\n" + 
+						   "   	git checkout " + __branch + "\n";
 				} else 
 				if(__branch != "master"){
-					return 
-						"   	cd \"" + repo_dir + "\"\n" + 
-						"   	git checkout " + config.branch + "\n";
+					return "   	cd \"" + repo_dir + "\"\n" + 
+						   "   	git checkout " + config.branch + "\n";
 				} else return "";
 			})() +
 			"   fi"
