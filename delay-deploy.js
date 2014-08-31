@@ -9,5 +9,20 @@ var coon = require("./coon.js");
 //args[3] = JSON.parse(args[3]);
 
 coon.gitSeeker(function(){
-    coon.deploy.apply({}, ["test", {}, "trigen", {}]);
+    coon.deploy.apply({}, ["test", {}, "trigen", {}, function(data, type){
+                switch(type){
+                    case "command": 
+                        console.log("=> " + data);
+                        break;
+
+                    case "data":
+                        process.stdout.write(data);
+                        break;
+
+                    case "error":
+                        process.stdout.write("❗️  " + data);
+                }
+            }, function(){
+                process.exit();
+            }]);
 });
