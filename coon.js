@@ -335,9 +335,10 @@ RemoteExec.exec = function (conn, command, print, end) {
             end();
         }).stderr.on('data', function(data) {
         	data = data + "";
-        	if(data.indexOf("-bash: ") == 0) return;
-            print(data, data.indexOf("Switched to a new branch") == -1 ? "error" : "data");
-            if(data.indexOf("Switched to a new branch") == -1) process.exit();
+        	print(data, "message");
+        	//if(data.indexOf("-bash: ") == 0) return;
+            //print(data, data.indexOf("Switched to a new branch") == -1 ? "error" : "data");
+            //if(data.indexOf("Switched to a new branch") == -1) process.exit();
         });
     });
 }
@@ -351,7 +352,6 @@ function GitSeeker (closed) {
         if(lsof.match(/(^|\n)git( |-).*\n/g) == null){
             clearInterval(seeker);
             closed();
-            console.log(lsof.match(/(^|\n)git( |-).*\n/g));
         }
     }, 2000 );
 }
