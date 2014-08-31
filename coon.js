@@ -458,9 +458,11 @@ function Deploy (name, config, host_name, host_config, print, end) {
         "   rm \"../index-" + repo_index + "\"\n" +
         "   find . -path ./.git -prune -o -regextype posix-extended -regex \"\\..+\" -exec echo \"{}\" \\; >> \"../index-" + repo_index + "\"",
 
-        "rsync -a " + config.target + "/.coon/" + repo_dir + "/" + config.source + "/* " + config.target,
-        "rm -rf " + config.target + "/.coon/" + repo_dir 
+        "rsync -a " + config.target + "/.coon/" + repo_dir + "/" + config.source + "/* " + config.target 
     );
+
+	if(config.delta_mode != "true")
+	commands.push("rm -rf " + config.target + "/.coon/" + repo_dir);
 
     RemoteExec(host_config, commands, (print || function(){}), (end || function(){}));
 
