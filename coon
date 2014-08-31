@@ -1,43 +1,48 @@
 #!/usr/local/bin/node
 
 /*
-    coon
-        add <host-config-name> with <deploy-config-name>
-            "wizard" or
-            [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>]  
+coon <help | version>
 
-        add host <host-config-name>
-            "wizard" or
-            [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>]
+coon clear - removes hook scripts and deploy configs
 
-        add deploy <deploy-config-name>
-            "wizard" or 
-            [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>]  
+coon show <configs | hosts | deploys>
 
-        show <configs | hosts | deploys>
+coon add <host-config-name> with <deploy-config-name>
+    [-w] for wizard, or 
+    [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] 
+    [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]  
 
-        remove 
-            all <hosts | deploys>
-            host <name>
-            deploy <name>
+coon add host <host-config-name>
+    [-w] for wizard, or
+    [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>]
 
-        clear
+coon add deploy <deploy-config-name>
+    [-w] for wizard, or
+    [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]  
 
-        edit <deploy | host> <name>
-            "wizard" or
-            [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>]  
+coon remove all <hosts | deploys>
 
-        deploy <deploy-name> to <host-name>
-            [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] 
-        // delay-deploy <deploy-name> <host-name> [branch-name]
-        
-        build <deploy-name>
-            [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>]
+coon remove host <name>
 
-        bind <deploy-name> to <host-name>
-            [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] 
+coon remove deploy <name>
 
-        unbind <deploy-name> [from <host-name>]
+coon edit <deploy | host> <name>
+    [-w] for wizard, or
+    [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] 
+    [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]  
+
+coon build <deploy-name>
+    [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]
+
+coon deploy <deploy-name> to <host-name>
+    [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] 
+    [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>] 
+    
+coon bind <deploy-name> to <host-name>
+    [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] 
+    [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>] 
+
+coon unbind <deploy-name> [from <host-name>]
 
 */ 
 
@@ -126,6 +131,55 @@ function EditWizard(props, conf, end){
 try {
 
 switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "build", "deploy", "delay-deploy", "bind", "unbind")){
+    case "help":
+        console.log(
+            "Example of usage:\n" +
+            "   coon <help | version>\n" +
+            "   \n" +
+            "   coon clear - removes hook scripts and deploy configs\n" +
+            "   \n" +
+            "   coon show <configs | hosts | deploys>\n" +
+            "   \n" +
+            "   coon add <host-config-name> with <deploy-config-name>\n" +
+            "       [-w] for wizard, or\n" +
+            "       [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>]\n" +
+            "       [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]\n" +  
+            "   \n" +
+            "   coon add host <host-config-name>\n" +
+            "       [-w] for wizard, or\n" +
+            "       [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>]\n" +
+            "   \n" +
+            "   coon add deploy <deploy-config-name>\n" +
+            "       [-w] for wizard, or\n" +
+            "       [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]\n" +
+            "   \n" +
+            "   coon remove all <hosts | deploys>\n" +
+            "   \n" +
+            "   coon remove host <name>\n" +
+            "   \n" +
+            "   coon remove deploy <name>\n" +
+            "   \n" +
+            "   coon edit <deploy | host> <name>\n" +
+            "       [-w] for wizard, or\n" +
+            "       [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>]\n" +
+            "       [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]\n" + 
+            "   \n" +
+            "   coon build <deploy-name>\n" +
+            "       [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]\n" +
+            "   \n" + 
+            "   coon deploy <deploy-name> to <host-name>\n" +
+            "       [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>]\n" +
+            "       [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]\n" +
+            "   \n" +
+            "   coon bind <deploy-name> to <host-name>\n" +
+            "       [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>]\n" +
+            "       [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]\n" +
+            "   \n" +
+            "   coon unbind <deploy-name> [from <host-name>]\n"
+        );
+
+        process.exit();
+
     case "version": 
         var json = require("./package.json");
         console.log(json.name + ' ' + json.version);
@@ -249,7 +303,7 @@ switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "
 
                     break;
                 } else {    
-                    var tprops = cli.values("branch", "build-command", "source", "target"), props = {};
+                    var tprops = cli.values("branch", "build-command", "source", "target", "delta-mode"), props = {};
 
                     for(var key in tprops) if(tprops.hasOwnProperty(key)) {
                         props[key.replace(/-/g, "_")] = tprops[key];
@@ -287,7 +341,7 @@ switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "
 
                     break;
                 } else {    
-                    var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target"), props = {};
+                    var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target", "delta-mode"), props = {};
 
                     for(var key in tprops) if(tprops.hasOwnProperty(key)) {
                         props[key.replace(/-/g, "_")] = tprops[key];
@@ -424,7 +478,7 @@ switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "
 
                     break;
                 } else {    
-                    var tprops = cli.values("branch", "build-command", "source", "target");
+                    var tprops = cli.values("branch", "build-command", "source", "target", "delta-mode");
 
                     coon.ConfigsStorage.openDeploys();
 
@@ -444,7 +498,7 @@ switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "
         break;
 
     case "build":
-        var name = cli.read(), tprops = cli.values("branch", "build-command", "source", "target"), props = {};
+        var name = cli.read(), tprops = cli.values("branch", "build-command", "source", "target", "delta-mode"), props = {};
 
         for(var key in tprops) if(tprops.hasOwnProperty(key)) {
             props[key.replace(/-/g, "_")] = tprops[key];
@@ -460,7 +514,7 @@ switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "
         cli.expect("to");
         var host_name = cli.read();
 
-        var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target"), props = {};
+        var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target", "delta-mode"), props = {};
 
         for(var key in tprops) if(tprops.hasOwnProperty(key)) {
             props[key.replace(/-/g, "_")] = tprops[key];
@@ -494,12 +548,12 @@ switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "
         cli.expect("to");
         var host_name = cli.read();
 
-        var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target"), props = {};
+        var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target", "delta-mode"), props = {};
 
         for(var key in tprops) if(tprops.hasOwnProperty(key)) {
             props[key.replace(/-/g, "_")] = tprops[key];
         }
-        
+
         coon.delayDeploy(
             name, FilterProps(coon.ConfigsStorage.deployProps, props), 
             host_name, FilterProps(coon.ConfigsStorage.hostProps, props));
@@ -512,7 +566,7 @@ switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "
         cli.expect("to");
         var host_name = cli.read();
 
-        var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target"), props = {};
+        var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target", "delta-mode"), props = {};
 
         for(var key in tprops) if(tprops.hasOwnProperty(key)) {
             props[key.replace(/-/g, "_")] = tprops[key];
@@ -542,6 +596,3 @@ switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "
     console.log("❗️  " + e.message.red);
     process.exit();
 }
-
-//cli.end();
-//process.exit();s

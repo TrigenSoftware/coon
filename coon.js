@@ -39,13 +39,15 @@ var ConfigsStorage = {
 		branch: "*",
 		build_command: "",
 		source: ".",
-		target: "."
+		target: ".",
+		delta_mode: "false"
 	},
 	deployProps: [
 		"branch",
 		"build_command",
 		"source",
-		"target"
+		"target",
+		"delta_mode"
 	]
 };
 
@@ -389,49 +391,75 @@ function Deploy (name, config, host_name, host_config, print, end) {
 	if(!ConfigsStorage.testDeployConfig(config) || !ConfigsStorage.testHostConfig(host_config) 
 	|| (config.branch.trim() != "*" && config.branch.trim() != __branch)) return false;
 
-	var commands = [
-        "mkdir -p " + config.target + "/.coon-tmp",
-        "rm -rf " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_"),
-        "[ ! -e \"" + config.target + "/.coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\" ] && touch \"" + config.target + "/.coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\"",
-        "git clone " + __remote + " " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_")
+	var repo_dir = ( name + " " + config.branch ).replace(/\s/g, "_"),
+		repo_index = ( name + " " + __branch ).replace(/\s/g, "-"),
+		commands = [
+        "mkdir -p " + config.target + "/.coon",
+        "[ ! -e \"" + config.target + "/.coon/index-" + repo_index + "\" ] && touch \"" + config.target + "/.coon/index-" + repo_index + "\""
     ];
 
-    if(config.branch == "*")
-	commands.push(
-        "cd " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + " \n" +
-        "   git checkout " + __branch
-    );
-	else
-    if(__branch != "master")
-	commands.push(
-        "cd " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + " \n" +
-        "   git checkout " + config.branch
-    );
+    if(config.delta_mode != "true"){
+	    commands.push(
+	    	"rm -rf " + config.target + "/.coon/" + repo_dir,
+	    	"git clone " + __remote + " " + config.target + "/.coon/" + repo_dir
+	    );
+
+	    if(config.branch == "*")
+		commands.push(
+	        "cd " + config.target + "/.coon/" + repo_dir + " \n" +
+	        "   git checkout " + __branch
+	    );
+		else
+	    if(__branch != "master")
+		commands.push(
+	        "cd " + config.target + "/.coon/" + repo_dir + " \n" +
+	        "   git checkout " + config.branch
+	    );
+	} else {
+		commands.push(
+			"cd " + config.target + "/.coon/\n" +
+			"   if [ -f \"" + repo_dir + "\"]; then\n" +
+			"   	cd \"" + repo_dir + "\"\n" + 
+			"   	git pull\n" +
+			"   else\n" +
+			"   	git clone " + __remote + " " + repo_dir + "\n" +
+			(function(){
+				if(config.branch == "*"){ 
+					return 
+						"   	cd \"" + repo_dir + "\"\n" + 
+						"   	git checkout " + __branch + "\n";
+				} else 
+				if(__branch != "master"){
+					return 
+						"   	cd \"" + repo_dir + "\"\n" + 
+						"   	git checkout " + config.branch + "\n";
+				} else return "";
+			})() +
+			"   fi"
+		);
+	}
 
     commands.push(
-    	// "cd " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + " \n" +
-        // "   find . -path ./.git -prune -o -regextype posix-extended -regex \"\\..+\" -exec replace \"{}\" \"\" -- \"../../.coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\" \\;",
-
         "cd " + config.target + "\n" + 
         "   while read line; do\n" +
-		"       if [ ! -z \"$line\" ] && [ -f \"$line\" ] && [ ! -f \".coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/$line\" ]; then\n" + 
+		"       if [ ! -z \"$line\" ] && [ -f \"$line\" ] && [ ! -f \".coon/" + repo_dir + "/$line\" ]; then\n" + 
 		"           echo \"$line will be deleted\"\n" + 
 		"           rm -rf \"$line\"\n" + 
 		"       fi\n" + 
-		"   done < \".coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\"\n" +
+		"   done < \".coon/index-" + repo_index + "\"\n" +
         "   while read line; do\n" +
-		"       if [ ! -z \"$line\" ] && [ -d \"$line\" ] && [ ! -d \".coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/$line\" ] && [ ! $(ls -A \"$line\") ]; then\n" + 
+		"       if [ ! -z \"$line\" ] && [ -d \"$line\" ] && [ ! -d \".coon/" + repo_dir + "/$line\" ] && [ ! $(ls -A \"$line\") ]; then\n" + 
 		"           echo \"$line will be deleted\"\n" + 
 		"           rm -rf \"$line\"\n" + 
 		"       fi\n" + 
-		"   done < \".coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\"",
+		"   done < \".coon/index-" + repo_index + "\"",
 
-        "cd " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + " \n" +
-        "   rm \"../../.coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\"\n" +
-        "   find . -path ./.git -prune -o -regextype posix-extended -regex \"\\..+\" -exec echo \"{}\" \\; >> \"../../.coon-files-" + ( name + " " + __branch ).replace(/\s/g, "-") + "\"",
+        "cd " + config.target + "/.coon/" + repo_dir + " \n" +
+        "   rm \"../index-" + repo_index + "\"\n" +
+        "   find . -path ./.git -prune -o -regextype posix-extended -regex \"\\..+\" -exec echo \"{}\" \\; >> \"../index-" + repo_index + "\"",
 
-        "rsync -a " + config.target + "/.coon-tmp/" + ( name + " " + config.branch ).replace(/\s/g, "_") + "/" + config.source + "/* " + config.target,
-        "rm -rf " + config.target + "/.coon-tmp" 
+        "rsync -a " + config.target + "/.coon/" + repo_dir + "/" + config.source + "/* " + config.target,
+        "rm -rf " + config.target + "/.coon/" + repo_dir 
     );
 
     RemoteExec(host_config, commands, (print || function(){}), (end || function(){}));
