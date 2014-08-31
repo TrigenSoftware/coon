@@ -347,10 +347,11 @@ RemoteExec.exec = function (conn, command, print, end) {
 
 function GitSeeker (closed) {
 	var seeker = setInterval(function(){
-        var lsof = sh.exec("lsof | grep git", {silent:true}).output;
-        if(lsof.match(/(^|\n)git .*\n/g) == null){
+        var lsof = sh.exec("lsof | grep '(^|\\n)git( |-).*\\n'", {silent:true}).output;
+        if(lsof.match(/(^|\n)git( |-).*\n/g) == null){
             clearInterval(seeker);
             closed();
+            console.log(lsof.match(/(^|\n)git( |-).*\n/g));
         }
     }, 2000 );
 }
