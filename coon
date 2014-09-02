@@ -1,421 +1,598 @@
 #!/usr/local/bin/node
 
-// coon [add [site name] [ssh host] [ssh user] [ssh password] [ssh port] [path in repo] [path on server]]
-// coon [bind <site name> [to <branch>]]  
+/*
+coon <help | version>
 
-"use strict";
+coon clear - removes hook scripts and deploy configs
 
-// require
-var sys  = require("util"),
-    fs   = require("fs"),
-    path = require("path"),
-    ssh  = require("ssh2"),
-    git  = require("git-info"),
-    cs   = require("colors"),
-    sh   = require("shelljs"),
-    fe   = require('forever-monitor');
+coon show <configs | hosts | deploys>
+
+coon add <host-config-name> with <deploy-config-name>
+    [-w] for wizard, or 
+    [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] 
+    [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]  
+
+coon add host <host-config-name>
+    [-w] for wizard, or
+    [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>]
+
+coon add deploy <deploy-config-name>
+    [-w] for wizard, or
+    [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]  
+
+coon remove all <hosts | deploys>
+
+coon remove host <name>
+
+coon remove deploy <name>
+
+coon edit <deploy | host> <name>
+    [-w] for wizard, or
+    [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] 
+    [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]  
+
+coon build <deploy-name>
+    [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]
+
+coon deploy <deploy-name> to <host-name>
+    [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] 
+    [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>] 
+    
+coon bind <deploy-name> to <host-name>
+    [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>] 
+    [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>] 
+
+coon unbind <deploy-name> [from <host-name>]
+
+*/ 
+
+var coon = require("./coon.js"),
+    cli  = require("argue-cli"),
+    cs   = require("colors");
 
 var readline = require('readline')
     .createInterface({
         input: process.stdin,
         output: process.stdout
-    }),
-    args = process.argv;
-
-// some data
-var keys = {
-    NAME: 0,
-    SSH_HOST: 1,
-    SSH_USER: 2,
-    SSH_PKP: 3,
-    SSH_PORT: 4,
-    BRANCH: 5,
-    REPO_DIR: 6,
-    SERVER_PATH: 7
-};
-
-var wizardTemplate = [
-    ["Config name ", false, ""],
-    ["SSH host ", false, ""],
-    ["SSH user ", false, ""],
-    ["Path to SSH private key ", false, ""],
-    ["SSH port ", 22, "(22 by default)"],
-    ["Branch to observe ", "master", "(master by default)"],
-    ["Dir in repo ", ".", "(. by default)"],
-    ["Path on server ", ".", "(. by default)"]
-];
-
-// hook
-if(!sh.test('-e', process.cwd() + "/.git/hooks")) sh.mkdir(process.cwd() + "/.git/hooks");
-var hookScript = sh.test('-e', process.cwd() + "/.git/hooks/pre-push") ? sh.cat(process.cwd() + "/.git/hooks/pre-push") : "#!/bin/sh\n\n";
-
-function hooks_Save() {
-    hookScript.to(process.cwd() + "/.git/hooks/pre-push");
-    sh.exec("chmod +x " + process.cwd() + "/.git/hooks/pre-push");
-}
-
-function hooks_Add(conf){
-    hooks_Remove(conf, true);
-    hookScript += "# deploy " + conf[keys.NAME] + " with " + conf[keys.BRANCH] + "\n" + __dirname + "/coon delay-deploy \"" + conf[keys.NAME] + "\" with \"" + conf[keys.BRANCH] + "\"\n";
-    hooks_Save();
-}
-
-function hooks_Remove(conf, withBranch){
-    if(!withBranch){
-        hookScript = hookScript.replace(new RegExp("# deploy " + conf[keys.NAME] + " with [^\\n]+\n[^\\n]+\n", "g"), "");
-    } else {
-        hookScript = hookScript.replace(new RegExp("# deploy " + conf[keys.NAME] + " with " + conf[keys.BRANCH] + "\n[^\\n]+\n", "g"), "");
-    }
-    hooks_Save();
-}
-
-// configs
-var configsData = sh.test('-e', process.cwd() + "/.git/coon.json") ? JSON.parse(sh.cat(process.cwd() + "/.git/coon.json")) : {};
-
-function configs_Save() {
-    JSON.stringify(configsData).to(process.cwd() + "/.git/coon.json");
-}
-
-function configs_AddConfig(data, oldname) {
-    if (oldname) delete configsData[oldname];
-    configsData[data[0]] = data;
-
-    console.log("\n🍻  " + "Config `".green + data[0] + (oldname ? "` updated." : "` added.").green);
-
-    configs_Save();
-    readline.close();
-    process.exit();
-}
-
-function configs_Remove(name) {
-    if (!configsData[name]) {
-        console.log("❗️  " + "Config with name `".red + name + "` doesn't exist.".red);
-        process.exit();
-    }
-
-    delete configsData[name];
-    console.log("🍻  " + "Config `".green + name + "` removed.".green);
-
-    configs_Save();
-    readline.close();
-    process.exit();
-}
-
-function configs_List() {
-    var list = "";
-    for (var name in configsData) list += name.green + ", ";
-
-    if (list.length == 0) console.log("Empty.".green);
-    else console.log(list.replace(/, $/, "") + ".");
-
-    process.exit();
-}
-
-function configs_Show(name) {
-    if (!configsData[name]) {
-        console.log("❗️  " + "Config with name `".red + name + "` doesn't exist.".red);
-        process.exit();
-    }
-
-    var conf = configsData[name],
-        out = "";
-    wizardTemplate.forEach(function(wiz, i) {
-        out += (wiz[0].replace(/\w$/, "") + ": ").green + conf[i] + "\n";
     });
 
-    console.log(out);
-    process.exit();
+function FilterProps(props, obj){
+    var res = {};
+
+    props.forEach(function(prop){
+        if(obj[prop]) res[prop] = obj[prop];
+    });
+
+    return res;
 }
 
-// helpers
-function startAddWizard(i) {
-    function addWizardQuest() {
-        readline.question(wizardTemplate[i][0] + wizardTemplate[i][2] + ": ", function(answer) {
-            if (wizardTemplate[i][1] === false && !answer) {
-                addWizardQuest(i);
-                return;
-            } else if (wizardTemplate[i][1] && !answer) answer = wizardTemplate[i][1];
-            siteData[i] = (answer + "").replace("\"", "\\\"");
+function ConcatArrays(arr1, arr2){
+    var res = [];
 
-            if (i == wizardTemplate.length - 1) configs_AddConfig(siteData);
-            else addWizardQuest(i++);
+    arr1.forEach(function(val){
+        res.push(val);
+    });
+
+    arr2.forEach(function(val){
+        res.push(val);
+    });
+
+    return res;
+}
+
+function ConcatObjects(obj1, obj2){
+    var res = {};
+
+    for(var key in obj1) if(obj1.hasOwnProperty(key)){
+        res[key] = obj1[key];
+    }
+
+    for(var key in obj2) if(obj2.hasOwnProperty(key)){
+        res[key] = obj2[key];
+    }
+
+    return res;
+}
+
+function Wizard(props, defs, end){
+    var conf = {}, i = 0;
+
+    function next() {
+        readline.question(props[i] + ( defs[props[i]] ? (" (" + defs[props[i]] + " by default): ") : ": " ), function(answer) {
+            if (defs[props[i]] === undefined && !answer)
+                return next();
+            else 
+            if (defs[props[i]] !== undefined && !answer) answer = defs[props[i]];
+            conf[props[i]] = (answer + "").replace("\"", "\\\"");
+
+            if (i == props.length - 1) end(conf);
+            else next(i++);
         });
     }
 
-    addWizardQuest();
+    next();
 }
 
-function startEditWizard(configname) {
-    if (!configsData[configname]) {
-        console.log("❗️  " + "Config with name `".red + configname + "` doesn't exist.".red);
-        process.exit();
-    }
+function EditWizard(props, conf, end){
+    var i = 0;
+    
+    function next() {
+        readline.question(props[i] + " (" + conf[props[i]] + "): ", function(answer) {
+            if (answer) conf[props[i]] = (answer + "").replace("\"", "\\\"");
 
-    var siteData = configsData[configname],
-        i = 0,
-        name = siteData[0];
-
-    function editWizardQuest() {
-        readline.question(wizardTemplate[i][0] + "(" + siteData[i] + "): ", function(answer) {
-            if (answer) siteData[i] = (answer + "").replace("\"", "\\\"");
-
-            if (i == wizardTemplate.length - 1) configs_AddConfig(siteData, name);
-            else editWizardQuest(i++);
+            if (i == props.length - 1) end(conf);
+            else next(i++);
         });
     }
 
-    editWizardQuest();
+    next();
 }
 
-function remoteExec(conn, command, cb){
-    conn.exec(command, function(err, stream) {
-        if (err) {
-            throw err;
-            process.exit();
-        }
+try {
 
-        stream.on('data', function(data) {
-            console.log(data + "");
-        }).on('close', function() {
-            cb();
-        }).stderr.on('data', function(data) {
-            console.log("❗️  " + (data + "").red);
-            process.exit();
-        });
-    });
-}
-
-function remoteExecQueue(conf, commands, cb){
-    var conn = new ssh();
-    conn.on('ready', function() {
-        var i = 0;
-
-        function rec(data){
-            if(i == commands.length) return conn.end(), cb();
-            console.log("=> " + commands[i].cyan);
-            remoteExec(conn, commands[i++], rec);
-        }
-
-        rec();
-    }).connect({
-        host: conf[keys.SSH_HOST],
-        port: conf[keys.SSH_PORT],
-        username: conf[keys.SSH_USER],
-        privateKey: require('fs').readFileSync(conf[keys.SSH_PKP].replace("~", process.env.HOME + "/"), "utf8")
-    });
-}
-
-// go
-
-if (!sh.test('-e', process.cwd() + "/.git")) {
-    console.log("❗️  " + "You not in git repo.".red);
-    process.exit();
-}
-
-args.splice(0, 2);
-
-if (args[0] == "add") {
-    var siteData = [];
-
-    args.splice(0, 1);
-    args.forEach(function(arg, i) {
-        if (i >= wizardTemplate.length) {
-            console.log("❗️  " + "Too many arguments.".red);
-            process.exit();
-        }
-        siteData.push(arg);
-    });
-
-    if (siteData.length < wizardTemplate.length)
-        startAddWizard(siteData.length);
-} else 
-
-if (args[0] == "edit") {
-    if (!args[1]) {
-        console.log("❗️  " + "You should write config name.".red);
-        process.exit();
-    }
-
-    if (args.length > 2) {
-        console.log("❗️  " + "Too many arguments.".red);
-        process.exit();
-    }
-
-    startEditWizard(args[1]);
-} else 
-
-if (args[0] == "remove") {
-    if (!args[1]) {
-        console.log("❗️  " + "You should write config name.".red);
-        process.exit();
-    }
-
-    if (args.length > 2) {
-        console.log("❗️  " + "Too many arguments.".red);
-        process.exit();
-    }
-
-    configs_Remove(args[1]);
-} else 
-
-if (args[0] == "show") {
-    if (args.length > 2) {
-        console.log("❗️  " + "Too many arguments.".red);
-        process.exit();
-    }
-
-    if(args[1] == "configs") 
-        configs_List();
-    else 
-    if(args[1] == "binders"){
-        console.log(hookScript);
-        process.exit();
-    } else {
-        console.log("❗️  " + "Invalid command.".red);
-        process.exit();
-    }
-
-} else 
-
-if (args[0] == "show") {
-    if (!args[1]) {
-        console.log("❗️  " + "You should write config name.".red);
-        process.exit();
-    }
-
-    configs_Show(args[1]);
-} else 
-
-if (args[0] == "bind") {
-    if (!args[1]) {
-        console.log("❗️  " + "You should write config name.".red);
-        process.exit();
-    }
-
-    if (!configsData[args[1]]) {
-        console.log("❗️  " + "Config with name `".red + args[1] + "` doesn't exist.".red);
-        process.exit();
-    }
-
-    var conf = configsData[args[1]].slice();
-
-    if (args[2]) {
-        if (args[2] != "with") {
-            console.log("❗️  " + "Unknown command `".red + args[2] + "`.".red);
-            process.exit();
-        }
-
-        if (!args[3]) {
-            console.log("❗️  " + "You should write branch name.".red);
-            process.exit();
-        }
-
-        conf[keys.BRANCH] = args[3];
-    }
-
-    hooks_Add(conf);
-    console.log("🍻  " + "Config `".green + conf[keys.NAME] + "` binded to the `".green + conf[keys.BRANCH] + "` branch.".green);
-    process.exit();
-} else 
-
-if (args[0] == "unbind") {
-    if (!args[1]) {
-        console.log("❗️  " + "You should write config name.".red);
-        process.exit();
-    }
-
-    if (!configsData[args[1]]) {
-        console.log("❗️  " + "Config with name `".red + args[1] + "` doesn't exist.".red);
-        process.exit();
-    }
-
-    var conf = configsData[args[1]].slice(), withBranch = false;
-
-    if (args[2]) {
-        if (args[2] != "from") {
-            console.log("❗️  " + "Unknown command `".red + args[2] + "`.".red);
-            process.exit();
-        }
-
-        if (!args[3]) {
-            console.log("❗️  " + "You should write branch name.".red);
-            process.exit();
-        }
-
-        conf[keys.BRANCH] = args[3];
-        withBranch = true;
-    }
-
-    hooks_Remove(conf, withBranch);
-    if(withBranch) console.log("🍻  " + "Config `".green + conf[keys.NAME] + "` unbinded from the `".green + conf[keys.BRANCH] + "` branch.".green);
-    else console.log("🍻  " + "Config `".green + conf[keys.NAME] + "` unbinded from the repo.".green);
-    process.exit();
-} else 
-
-if (args[0] == "deploy" || args[0] == "delay-deploy") {
-    if (!args[1]) {
-        console.log("❗️  " + "You should write config name.".red);
-        process.exit();
-    }
-
-    if (!configsData[args[1]]) {
-        console.log("❗️  " + "Config with name `".red + args[1] + "` doesn't exist.".red);
-        process.exit();
-    }
-
-    var conf = configsData[args[1]].slice();
-
-    if (args[2]) {
-        if (args[2] != "with") {
-            console.log("❗️  " + "Unknown command `".red + args[2] + "`.".red);
-            process.exit();
-        }
-
-        if (!args[3]) {
-            console.log("❗️  " + "You should write branch name.".red);
-            process.exit();
-        }
-
-        conf[keys.BRANCH] = args[3];
-    }
-
-    if(args[0] == "delay-deploy"){
-        (new (fe.Monitor)('delay-deploy.js', {
-            max: 3,
-            silent: true,
-            options: args
-        })).start();
-
-        process.exit();
-    }
-
-    git(["repository", "branch"], function(err ,res){
-        if (err) {
-            console.log("❗️  " + "Something goes wrong.".red);
-            process.exit();
-        }
-
-        var cmds = [
-            "mkdir -p " + conf[keys.SERVER_PATH] + "/.coon-tmp",
-            "git clone " + res.repository + " " + conf[keys.SERVER_PATH] + "/.coon-tmp/" + (conf[keys.NAME] + " " + conf[keys.BRANCH]).replace(/\s/g, "_"),
-        ];
-
-        if(conf[keys.BRANCH] != "master")
-            cmds.push(
-                "cd " + conf[keys.SERVER_PATH] + "/.coon-tmp/" + (conf[keys.NAME] + " " + conf[keys.BRANCH]).replace(/\s/g, "_") + " \n" +
-                "   git checkout -b " + conf[keys.BRANCH]
-            );
-
-        cmds.push(
-            "mv -f " + conf[keys.SERVER_PATH] + "/.coon-tmp/" + (conf[keys.NAME] + " " + conf[keys.BRANCH]).replace(/\s/g, "_") + "/" + conf[keys.REPO_DIR] + "/* " + conf[keys.SERVER_PATH],
-            "rm -rf " + conf[keys.SERVER_PATH] + "/.coon-tmp" 
+switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "build", "deploy", "delay-deploy", "bind", "unbind")){
+    case "help":
+        console.log(
+            "Example of usage:\n" +
+            "   coon <help | version>\n" +
+            "   \n" +
+            "   coon clear - removes hook scripts and deploy configs\n" +
+            "   \n" +
+            "   coon show <configs | hosts | deploys>\n" +
+            "   \n" +
+            "   coon add <host-config-name> with <deploy-config-name>\n" +
+            "       [-w] for wizard, or\n" +
+            "       [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>]\n" +
+            "       [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]\n" +  
+            "   \n" +
+            "   coon add host <host-config-name>\n" +
+            "       [-w] for wizard, or\n" +
+            "       [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>]\n" +
+            "   \n" +
+            "   coon add deploy <deploy-config-name>\n" +
+            "       [-w] for wizard, or\n" +
+            "       [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]\n" +
+            "   \n" +
+            "   coon remove all <hosts | deploys>\n" +
+            "   \n" +
+            "   coon remove host <name>\n" +
+            "   \n" +
+            "   coon remove deploy <name>\n" +
+            "   \n" +
+            "   coon edit <deploy | host> <name>\n" +
+            "       [-w] for wizard, or\n" +
+            "       [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>]\n" +
+            "       [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]\n" + 
+            "   \n" +
+            "   coon build <deploy-name>\n" +
+            "       [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]\n" +
+            "   \n" + 
+            "   coon deploy <deploy-name> to <host-name>\n" +
+            "       [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>]\n" +
+            "       [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]\n" +
+            "   \n" +
+            "   coon bind <deploy-name> to <host-name>\n" +
+            "       [--ssh-host <ssh-host>] [--ssh-user <ssh-user>] [--ssh-privatekey <ssh-path-to-private-key>] [--ssh-port <ssh-port>]\n" +
+            "       [--branch <branch-name>] [--build-command <build command>] [--source <source>] [--target <target>] [--delta-mode <true | false>]\n" +
+            "   \n" +
+            "   coon unbind <deploy-name> [from <host-name>]\n"
         );
 
-        remoteExecQueue(conf, cmds, function(){
-            console.log("🍻  " + "`".green + conf[keys.BRANCH] + "` branch was successfully deployed on `".green + conf[keys.NAME] + "`.".green);
-            process.exit();
-        });
-    });
-} else {
+        process.exit();
+
+    case "version": 
+        var json = require("./package.json");
+        console.log(json.name + ' ' + json.version);
+        process.exit();
+
+    case "show":
+        switch(cli.expect("host", "hosts", "deploy", "deploys", "build-hook", "deploy-hook")){
+            case "host":
+                var name = cli.read();
+                coon.ConfigsStorage.openHosts();
+
+                if(!coon.ConfigsStorage.hosts[name]) throw new Error("Host config with name `" + name + "` doesn't exist.");
+
+                coon.ConfigsStorage.hostProps.forEach(function(prop){
+                    console.log(prop.green + ": " + coon.ConfigsStorage.hosts[name][prop]);
+                });
+
+                cli.end();
+                process.exit();
+
+            case "hosts":
+                var empty = true;
+                coon.ConfigsStorage.openHosts();
+                for(var key in coon.ConfigsStorage.hosts){
+                    console.log(key.green);   
+                    empty = false;
+                }
+                
+                if(empty) console.log("<empty>".red);
+                cli.end();
+                process.exit();
+
+            case "deploy":
+                var name = cli.read();
+                coon.ConfigsStorage.openDeploys();
+
+                if(!coon.ConfigsStorage.deploys[name]) throw new Error("Deploy config with name `" + name + "` doesn't exist.");
+
+                coon.ConfigsStorage.deployProps.forEach(function(prop){
+                    console.log(prop.green + ": " + coon.ConfigsStorage.deploys[name][prop]);
+                });
+
+                cli.end();
+                process.exit();
+
+            case "deploys":
+                var empty = true;
+                coon.ConfigsStorage.openDeploys();
+                for(var key in coon.ConfigsStorage.deploys){
+                    console.log(key.green);   
+                    empty = false;
+                }
+                
+                if(empty) console.log("<empty>".red);
+                cli.end();
+                process.exit();
+
+            case "build-hook":
+                coon.ScriptsStorage.openBuilds();
+                console.log(coon.ScriptsStorage.pre_commit);
+
+                cli.end();
+                process.exit();
+
+            case "deploy-hook":
+                coon.ScriptsStorage.openDeploys();
+                console.log(coon.ScriptsStorage.pre_push);
+
+                cli.end();
+                process.exit();
+        }
+
+    case "add":
+        var name = cli.read();
+        switch(name){
+            case "host":
+                name = cli.read();
+                
+                if(cli.options({ "w": "wizard" }).wizard){
+                    cli.end();
+
+                    Wizard(coon.ConfigsStorage.hostProps, coon.ConfigsStorage.hostDefs, function(props){
+                        coon.ConfigsStorage.openHosts();
+                        coon.ConfigsStorage.addHost(name, props);
+                        coon.ConfigsStorage.saveHosts();
+
+                        cli.end();
+                        process.exit();
+                    });
+                } else {    
+                    var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port"), props = {};
+
+                    for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+                        props[key.replace(/-/g, "_")] = tprops[key];
+                    }
+
+                    coon.ConfigsStorage.openHosts();
+                    coon.ConfigsStorage.addHost(name, props);
+                    coon.ConfigsStorage.saveHosts();
+
+                    cli.end();
+                    process.exit();
+                }
+
+                break;
+
+            case "deploy":
+                name = cli.read();
+                
+                if(cli.options({ "w": "wizard" }).wizard){
+                    cli.end();
+
+                    Wizard(coon.ConfigsStorage.deployProps, coon.ConfigsStorage.deployDefs, function(props){
+                        coon.ConfigsStorage.openDeploys();
+                        coon.ConfigsStorage.addDeploy(name, props);
+                        coon.ConfigsStorage.saveDeploys();
+
+                        cli.end();
+                        process.exit();
+                    });
+
+                    break;
+                } else {    
+                    var tprops = cli.values("branch", "build-command", "source", "target", "delta-mode"), props = {};
+
+                    for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+                        props[key.replace(/-/g, "_")] = tprops[key];
+                    }
+
+                    coon.ConfigsStorage.openDeploys();
+                    coon.ConfigsStorage.addDeploy(name, props);
+                    coon.ConfigsStorage.saveDeploys();
+
+                    cli.end();
+                    process.exit();
+                }
+
+                break;
+
+            default:
+                cli.expect("with");
+                var deploy_name = cli.read();
+
+                if(cli.options({ "w": "wizard" }).wizard){
+                    cli.end();
+
+                    Wizard(ConcatArrays(coon.ConfigsStorage.hostProps, coon.ConfigsStorage.deployProps), ConcatObjects(coon.ConfigsStorage.hostDefs, coon.ConfigsStorage.deployDefs), function(props){
+                        coon.ConfigsStorage.openHosts();
+                        coon.ConfigsStorage.addHost(name, FilterProps(coon.ConfigsStorage.hostProps, props));
+                        coon.ConfigsStorage.saveHosts();
+
+                        coon.ConfigsStorage.openDeploys();
+                        coon.ConfigsStorage.addDeploy(deploy_name, FilterProps(coon.ConfigsStorage.deployProps, props));
+                        coon.ConfigsStorage.saveDeploys();
+
+                        cli.end();
+                        process.exit();
+                    });
+
+                    break;
+                } else {    
+                    var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target", "delta-mode"), props = {};
+
+                    for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+                        props[key.replace(/-/g, "_")] = tprops[key];
+                    }
+
+                    coon.ConfigsStorage.openHosts();
+                    coon.ConfigsStorage.addHost(name, FilterProps(coon.ConfigsStorage.hostProps, props));
+                    coon.ConfigsStorage.saveHosts();
+
+                    coon.ConfigsStorage.openDeploys();
+                    coon.ConfigsStorage.addDeploy(deploy_name, FilterProps(coon.ConfigsStorage.deployProps, props));
+                    coon.ConfigsStorage.saveDeploys();
+
+                    cli.end();
+                    process.exit();
+                }
+
+                break;
+        }
+
+        break;
+
+    case "remove":
+        switch(cli.expect("all", "host", "deploy")){
+            case "all":
+                if(cli.args.length == 0){
+                    coon.ConfigsStorage.openHosts();
+                    coon.ConfigsStorage.openDeploys();
+
+                    coon.ConfigsStorage.hosts = {};
+                    coon.ConfigsStorage.deploys = {};
+
+                    coon.ConfigsStorage.saveHosts();
+                    coon.ConfigsStorage.saveDeploys();
+
+                    cli.end();
+                    process.exit();
+                } else switch(cli.expect("hosts", "deploys")){
+                    case "hosts":
+                        coon.ConfigsStorage.openHosts();
+
+                        coon.ConfigsStorage.hosts = {};
+
+                        coon.ConfigsStorage.saveHosts();
+
+                        cli.end();
+                        process.exit();
+
+                    case "deploys":
+                        coon.ConfigsStorage.openDeploys();
+
+                        coon.ConfigsStorage.deploys = {};
+
+                        coon.ConfigsStorage.saveDeploys();
+
+                        cli.end();
+                        process.exit();
+                }
+
+            case "host":
+                coon.ConfigsStorage.openHosts();
+
+                coon.ConfigsStorage.removeHost(cli.read());
+
+                coon.ConfigsStorage.saveHosts();
+
+                cli.end();
+                process.exit();
+
+            case "deploy":
+                coon.ConfigsStorage.openDeploys();
+
+                coon.ConfigsStorage.removeDeploy(cli.read());
+
+                coon.ConfigsStorage.saveDeploys();
+
+                cli.end();
+                process.exit();
+        }
+
+    case "clear":
+        coon.clear();
+
+        cli.end();
+        process.exit();
+
+    case "edit":
+        switch(cli.expect("host", "deploy")){
+            case "host":
+                var name = cli.read();
+                
+                if(cli.options({ "w": "wizard" }).wizard){
+                    cli.end();
+                    coon.ConfigsStorage.openHosts();
+
+                    EditWizard(coon.ConfigsStorage.hostProps, coon.ConfigsStorage.hosts[name], function(props){
+                        coon.ConfigsStorage.hosts[name] = props;
+                        coon.ConfigsStorage.saveHosts();
+
+                        cli.end();
+                        process.exit();
+                    });
+                } else {    
+                    var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port");
+
+                    coon.ConfigsStorage.openHosts();
+
+                    for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+                        coon.ConfigsStorage.hosts[name][key.replace(/-/g, "_")] = tprops[key];
+                    }
+
+                    coon.ConfigsStorage.saveHosts();
+
+                    cli.end();
+                    process.exit();
+                }
+
+                break;
+
+            case "deploy":
+                var name = cli.read();
+                
+                if(cli.options({ "w": "wizard" }).wizard){
+                    cli.end();
+                    coon.ConfigsStorage.openDeploys();
+
+                    EditWizard(coon.ConfigsStorage.deployProps, coon.ConfigsStorage.deploys[name], function(props){
+                        coon.ConfigsStorage.deploys[name] = props;
+                        coon.ConfigsStorage.saveDeploys();
+
+                        cli.end();
+                        process.exit();
+                    });
+
+                    break;
+                } else {    
+                    var tprops = cli.values("branch", "build-command", "source", "target", "delta-mode");
+
+                    coon.ConfigsStorage.openDeploys();
+
+                    for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+                        coon.ConfigsStorage.deploys[name][key.replace(/-/g, "_")] = tprops[key];
+                    }
+
+                    coon.ConfigsStorage.saveDeploys();
+
+                    cli.end();
+                    process.exit();
+                }
+
+                break;
+        }
+
+        break;
+
+    case "build":
+        var name = cli.read(), tprops = cli.values("branch", "build-command", "source", "target", "delta-mode"), props = {};
+
+        for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+            props[key.replace(/-/g, "_")] = tprops[key];
+        }
+
+        coon.build(name, props, true);
+
+        cli.end();
+        process.exit();
+
+    case "deploy":
+        var name = cli.read();
+        cli.expect("to");
+        var host_name = cli.read();
+
+        var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target", "delta-mode"), props = {};
+
+        for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+            props[key.replace(/-/g, "_")] = tprops[key];
+        }
+
+        cli.end();
+        coon.deploy(
+            name, FilterProps(coon.ConfigsStorage.deployProps, props), 
+            host_name, FilterProps(coon.ConfigsStorage.hostProps, props), 
+            function(data, type){
+                switch(type){
+                    case "command": 
+                        console.log("=> " + data.cyan);
+                        break;
+
+                    case "data":
+                        process.stdout.write(data);
+                        break;
+
+                    case "error":
+                        process.stdout.write("❗️  " + data.red);
+                }
+            }, function(){
+                process.exit();
+            });
+
+        break;
+
+    case "delay-deploy":
+        var name = cli.read();
+        cli.expect("to");
+        var host_name = cli.read();
+
+        var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target", "delta-mode"), props = {};
+
+        for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+            props[key.replace(/-/g, "_")] = tprops[key];
+        }
+
+        coon.delayDeploy(
+            name, FilterProps(coon.ConfigsStorage.deployProps, props), 
+            host_name, FilterProps(coon.ConfigsStorage.hostProps, props));
+
+        cli.end();
+        process.exit();
+
+    case "bind":
+        var name = cli.read();
+        cli.expect("to");
+        var host_name = cli.read();
+
+        var tprops = cli.values("ssh-host", "ssh-user", "ssh-privatekey", "ssh-port", "branch", "build-command", "source", "target", "delta-mode"), props = {};
+
+        for(var key in tprops) if(tprops.hasOwnProperty(key)) {
+            props[key.replace(/-/g, "_")] = tprops[key];
+        }
+
+        coon.bind(
+            name, FilterProps(coon.ConfigsStorage.deployProps, props), 
+            host_name, FilterProps(coon.ConfigsStorage.hostProps, props));
+
+        cli.end();
+        process.exit();
+
+    case "unbind":
+        var name = cli.read(), host_name;
+        if(cli.args.length == 2){
+            cli.expect("from");
+            host_name = cli.read();
+        }
+
+        coon.unbind(name, host_name);
+
+        cli.end();
+        process.exit();
+}
+
+} catch (e) {
+    console.log("❗️  " + e.message.red);
     process.exit();
 }
