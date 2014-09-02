@@ -3,7 +3,29 @@ Raccoon
 
 Utility for deployment site from git.
 
-### Usage :shipit:
+
+## Installation
+
+Firstly, make sure you have installed the latest version of [node.js](http://nodejs.org/)
+(You may need to restart your computer after this step).
+
+From NPM for use as a command line app:
+
+    npm install coon -g
+
+From NPM for programmatic use:
+
+    npm install coon
+
+From Git:
+
+    git clone git://github.com/TrigenSoftware/coon.git
+    cd coon
+    npm link .
+    
+    
+## Usage :shipit:
+
 	coon <help | version>
 
 	coon clear - removes hook scripts and deploy configs
