@@ -543,10 +543,9 @@ function Clear () {
 }
 
 var args = process.argv;
-args.splice(0, 2);
 
-if(args[0] == "dd"){
-	args.splice(0, 1);
+if(args[2] == "dd"){
+	args.splice(0, 3);
 
 	args[1] = JSON.parse(args[1]);
 	args[3] = JSON.parse(args[3]);
@@ -558,22 +557,22 @@ if(args[0] == "dd"){
 	GitSeeker(function(){
 	    Deploy.apply({}, args);
 	});
-} 
+} else {
+	exports.__git = __git;
+	exports.__remote = __remote;
+	exports.__branch = __branch;
+	exports.__dir = __dir;
+	exports.__cwd = __cwd;
 
-exports.__git = __git;
-exports.__remote = __remote;
-exports.__branch = __branch;
-exports.__dir = __dir;
-exports.__cwd = __cwd;
+	exports.ConfigsStorage = ConfigsStorage;
+	exports.ScriptsStorage = ScriptsStorage;
 
-exports.ConfigsStorage = ConfigsStorage;
-exports.ScriptsStorage = ScriptsStorage;
+	exports.gitSeeker = GitSeeker;
 
-exports.gitSeeker = GitSeeker;
-
-exports.build = Build;
-exports.deploy = Deploy;
-exports.delayDeploy = DelayDeploy;
-exports.bind = Bind;
-exports.unbind = Unbind;
-exports.clear = Clear;
+	exports.build = Build;
+	exports.deploy = Deploy;
+	exports.delayDeploy = DelayDeploy;
+	exports.bind = Bind;
+	exports.unbind = Unbind;
+	exports.clear = Clear;
+}
