@@ -16,7 +16,7 @@ var __git = !sh.test('-e', process.cwd() + "/.git")
 		? sh.exec("git remote -v", {silent:true})
 			.output.match(/origin[\s\t]+(.+)[\s\t]+\(push\)/)[1]
 		: false,
-	__dir = __dirname,
+	__dir = "/usr/local/etc",
 	__cwd = process.cwd();
 
 
