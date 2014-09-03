@@ -2,7 +2,7 @@
     "name": "coon",
     "description": "Utility for deployment site from git.",
     "homepage": "https://github.com/TrigenSoftware/coon",
-    "version": "0.4.4",
+    "version": "0.4.5",
     "engines": {
         "node": ">=0.4.0"
     },
