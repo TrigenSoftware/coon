@@ -553,12 +553,12 @@ switch(cli.expect("help", "version", "show", "add", "remove", "clear", "edit", "
         for(var key in tprops) if(tprops.hasOwnProperty(key)) {
             props[key.replace(/-/g, "_")] = tprops[key];
         }
-
+        
         coon.delayDeploy(
             name, FilterProps(coon.ConfigsStorage.deployProps, props), 
             host_name, FilterProps(coon.ConfigsStorage.hostProps, props));
-
-        cli.end();
+        
+        cli.end(); 
         process.exit();
 
     case "bind":
