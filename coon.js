@@ -234,6 +234,8 @@ ScriptsStorage.addBuild = function (name, host_name, config) {
 	if(this.pre_commit.indexOf("# build " + name + " for " + host_name + "\n") != -1)
 		throw new Error("Already binded.");
 
+	if(!config.build_command) return false;
+
 	this.pre_commit += 
 		"# build " + name + " for " + host_name + "\n" 
 		+ __dir + "/coon build \"" + name + "\"" + this.configToArgs(config) 
@@ -472,7 +474,7 @@ function DelayDeploy (name, config, host_name, host_config) {
 	arguments[1] = JSON.stringify(config || {});
 	arguments[3] = JSON.stringify(host_config || {});
 	
-	(new (fe.Monitor)('delay-deploy.js', {
+	(new (fe.Monitor)(__dir + '/delay-deploy.js', {
         max: 3,
         silent: true,
         options: Array.prototype.slice.call(arguments)

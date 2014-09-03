@@ -5,7 +5,7 @@ coon <help | version>
 
 coon clear - removes hook scripts and deploy configs
 
-coon show <configs | hosts | deploys>
+coon show <configs | hosts | deploys | deploy-hook | build-hook>
 
 coon add <host-config-name> with <deploy-config-name>
     [-w] for wizard, or 
