@@ -471,14 +471,16 @@ function Deploy (name, config, host_name, host_config, print, end) {
 }
 
 function DelayDeploy (name, config, host_name, host_config) {
-	arguments[1] = JSON.stringify(config || {});
-	arguments[3] = JSON.stringify(host_config || {});
+	config = JSON.stringify(config || {});
+	host_config = JSON.stringify(host_config || {});
 	
-	(new (fe.Monitor)(__dir + '/delay-deploy.js', {
+	var dd = new (fe.Monitor)(__dir + '/coon.js', {
         max: 3,
         silent: true,
-        options: Array.prototype.slice.call(arguments)
-    })).start();
+        options: ["dd", name, config, host_name, host_config]
+    });
+	
+    dd.start();
 }
 
 function Bind (name, config, host_name, host_config) {
@@ -542,20 +544,37 @@ function Clear () {
 	sh.config.silent = false;
 }
 
-exports.__git = __git;
-exports.__remote = __remote;
-exports.__branch = __branch;
-exports.__dir = __dir;
-exports.__cwd = __cwd;
+var args = process.argv;
 
-exports.ConfigsStorage = ConfigsStorage;
-exports.ScriptsStorage = ScriptsStorage;
+if(args[2] == "dd"){
+	args.splice(0, 3);
 
-exports.gitSeeker = GitSeeker;
+	args[1] = JSON.parse(args[1]);
+	args[3] = JSON.parse(args[3]);
 
-exports.build = Build;
-exports.deploy = Deploy;
-exports.delayDeploy = DelayDeploy;
-exports.bind = Bind;
-exports.unbind = Unbind;
-exports.clear = Clear;
+	args.push(function(){}, function(){
+	    process.exit();
+	});
+
+	GitSeeker(function(){
+	    Deploy.apply({}, args);
+	});
+} else {
+	exports.__git = __git;
+	exports.__remote = __remote;
+	exports.__branch = __branch;
+	exports.__dir = __dir;
+	exports.__cwd = __cwd;
+
+	exports.ConfigsStorage = ConfigsStorage;
+	exports.ScriptsStorage = ScriptsStorage;
+
+	exports.gitSeeker = GitSeeker;
+
+	exports.build = Build;
+	exports.deploy = Deploy;
+	exports.delayDeploy = DelayDeploy;
+	exports.bind = Bind;
+	exports.unbind = Unbind;
+	exports.clear = Clear;
+}
