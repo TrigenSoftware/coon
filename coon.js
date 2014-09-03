@@ -212,6 +212,7 @@ ScriptsStorage.openDeploys = function () {
 
 ScriptsStorage.saveBuilds = function () {
 	if(!__git) throw new Error("You are not in git repo.");
+	sh.mkdir("-p", __git + "/hooks");
 	this.pre_commit.to(__git + "/hooks/pre-commit");
 	sh.chmod("+x", __git + "/hooks/pre-commit");
 
@@ -220,6 +221,7 @@ ScriptsStorage.saveBuilds = function () {
 
 ScriptsStorage.saveDeploys = function () {
 	if(!__git) throw new Error("You are not in git repo.");
+	sh.mkdir("-p", __git + "/hooks");
 	this.pre_push.to(__git + "/hooks/pre-push");
 	sh.chmod("+x", __git + "/hooks/pre-push");
 
