@@ -16,7 +16,7 @@ var __git = !sh.test('-e', process.cwd() + "/.git")
 		? sh.exec("git remote -v", {silent:true})
 			.output.match(/origin[\s\t]+(.+)[\s\t]+\(push\)/)[1]
 		: false,
-	__dir = "/usr/local/etc",
+	__dir = __dirname,
 	__cwd = process.cwd();
 
 
@@ -53,8 +53,8 @@ var ConfigsStorage = {
 
 
 ConfigsStorage.openHosts = function () {
-	if(sh.test('-e', __dir + "/coon-hosts.json"))
-		this.hosts = JSON.parse(sh.cat(__dir + "/coon-hosts.json"));
+	if(sh.test('-e', "/usr/local/etc/coon-hosts.json"))
+		this.hosts = JSON.parse(sh.cat("/usr/local/etc/coon-hosts.json"));
 	
 	return true;
 };
@@ -69,7 +69,7 @@ ConfigsStorage.openDeploys = function () {
 
 
 ConfigsStorage.saveHosts = function () {
-	JSON.stringify(this.hosts).to(__dir + "/coon-hosts.json");
+	JSON.stringify(this.hosts).to("/usr/local/etc/coon-hosts.json");
 
 	return true;
 };
