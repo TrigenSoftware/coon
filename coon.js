@@ -558,22 +558,22 @@ if(args[0] == "dd"){
 	GitSeeker(function(){
 	    Deploy.apply({}, args);
 	});
-} else {
-	exports.__git = __git;
-	exports.__remote = __remote;
-	exports.__branch = __branch;
-	exports.__dir = __dir;
-	exports.__cwd = __cwd;
+} 
 
-	exports.ConfigsStorage = ConfigsStorage;
-	exports.ScriptsStorage = ScriptsStorage;
+exports.__git = __git;
+exports.__remote = __remote;
+exports.__branch = __branch;
+exports.__dir = __dir;
+exports.__cwd = __cwd;
 
-	exports.gitSeeker = GitSeeker;
+exports.ConfigsStorage = ConfigsStorage;
+exports.ScriptsStorage = ScriptsStorage;
 
-	exports.build = Build;
-	exports.deploy = Deploy;
-	exports.delayDeploy = DelayDeploy;
-	exports.bind = Bind;
-	exports.unbind = Unbind;
-	exports.clear = Clear;
-}
+exports.gitSeeker = GitSeeker;
+
+exports.build = Build;
+exports.deploy = Deploy;
+exports.delayDeploy = DelayDeploy;
+exports.bind = Bind;
+exports.unbind = Unbind;
+exports.clear = Clear;
