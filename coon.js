@@ -474,7 +474,7 @@ function DelayDeploy (name, config, host_name, host_config) {
 	config = JSON.stringify(config || {});
 	host_config = JSON.stringify(host_config || {});
 	
-	(new (fe.Monitor)('./coon.js', {
+	(new (fe.Monitor)(__dir + '/coon.js', {
         max: 3,
         silent: true,
         options: ["dd", name, config, host_name, host_config]
@@ -549,6 +549,8 @@ if(args[2] == "dd"){
 
 	args[1] = JSON.parse(args[1]);
 	args[3] = JSON.parse(args[3]);
+
+	console.log(args);
 
 	args.push(function(){}, function(){
 	    process.exit();
