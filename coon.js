@@ -398,7 +398,7 @@ function Deploy (name, config, host_name, host_config, print, end) {
 		repo_index = ( name + " " + __branch ).replace(/\s/g, "-"),
 		commands = [
         "mkdir -p " + config.target + "/.coon",
-        "[ ! -e \"" + config.target + "/.coon/index-" + repo_index + "\" ] && touch \"" + config.target + "/.coon/index-" + repo_index + "\""
+        "[ ! -e \"" + config.target + "/.coon/index-" + repo_index + "\" ] && touch " + config.target + "/.coon/index-" + repo_index
     ];
 
     if(config.delta_mode != "true"){
