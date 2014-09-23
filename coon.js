@@ -15,11 +15,17 @@ var __git = !sh.test('-e', process.cwd() + "/.git")
 	__remote = __git 
 		? sh.exec("git remote -v", {silent:true})
 			.output.match(/origin[\s\t]+(.+)[\s\t]+\(push\)/)[1]
-			.replace(/:\/\/[\d\w]+@/, "://")
 		: false,
 	__dir = __dirname,
 	__cwd = process.cwd();
 
+/* https to ssh auth */
+
+if (__remote.match(/https:\/\/[\w\d]+@/)) {
+	__remote = __remote.replace(/https:\/\/[\w\d]+@/, "git@");
+	__remote = __remote.split("/");
+	__remote = __remote[0] + ":" + __remote[1] + "/" + __remote[2];
+}
 
 /* ConfigsStorage */
 
